@@ -49,16 +49,19 @@ a { color: var(--ice); }
 @keyframes drift { to { transform: translate3d(5vw, -4vh, 0) scale(1.1); } }
 
 .botanicals { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.art { display: block; height: auto; max-width: none; user-select: none; pointer-events: none; filter: drop-shadow(0 0 26px rgba(127, 208, 212, .22)); }
+.art { display: block; height: auto; max-width: none; user-select: none; pointer-events: none; rotate: var(--r, 0deg); filter: drop-shadow(0 0 26px rgba(127, 208, 212, .22)); }
 .botanicals .art { position: absolute; will-change: transform; }
 .bg-swallows { width: min(30vw, 380px); right: 5vw; top: 9vh; opacity: .55; animation: glide 14s ease-in-out infinite alternate; }
-.bg-mallow { width: min(40vw, 540px); left: -9vw; top: 34vh; opacity: .22; animation: sway 26s ease-in-out infinite alternate; }
-.bg-pink { width: min(28vw, 360px); right: -5vw; bottom: -4vh; opacity: .34; animation: sway 22s ease-in-out infinite alternate-reverse; }
-.bg-moth { width: min(26vw, 330px); left: 5vw; bottom: 5vh; opacity: .3; animation: flutter 11s ease-in-out infinite alternate; }
-.bg-insect { width: min(26vw, 330px); left: 40vw; top: 3vh; opacity: .16; animation: glide 18s ease-in-out infinite alternate-reverse; }
+.bg-mallow { width: min(40vw, 540px); left: -9vw; top: 34vh; opacity: .2; animation: sway 26s ease-in-out infinite alternate; }
+.bg-pink { width: min(26vw, 340px); right: -5vw; bottom: -4vh; opacity: .32; animation: sway 22s ease-in-out infinite alternate-reverse; }
+.bg-moth { width: min(24vw, 310px); left: 4vw; bottom: 4vh; opacity: .28; animation: flutter 11s ease-in-out infinite alternate; }
+.bg-insect { width: min(24vw, 310px); left: 41vw; top: 3vh; opacity: .15; animation: glide 18s ease-in-out infinite alternate-reverse; }
+.bg-teal { width: min(30vw, 400px); right: 22vw; bottom: -14vh; opacity: .24; animation: sway 28s ease-in-out infinite alternate; }
+.bg-bluebloom { width: min(24vw, 320px); left: -4vw; top: 6vh; opacity: .2; animation: sway 24s ease-in-out infinite alternate-reverse; }
+.bg-butterfly { width: min(16vw, 210px); left: 26vw; bottom: 10vh; opacity: .3; animation: flutter 9s ease-in-out infinite alternate-reverse; }
 @keyframes flutter { from { transform: rotate(-4deg) translateY(0); } to { transform: rotate(3deg) translateY(-14px); } }
 @keyframes glide { from { transform: translate(0, 0) rotate(-2deg); } to { transform: translate(-14px, 12px) rotate(2deg); } }
-@keyframes sway { from { rotate: -3deg; } to { rotate: 3deg; } }
+@keyframes sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
 
 /* film grain, scanlines, and an occasional signal tear */
 .grain { position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: .16; mix-blend-mode: overlay;
@@ -254,7 +257,7 @@ input[type="checkbox"] { accent-color: var(--rose); width: 1rem; height: 1rem; }
 .ggrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px 22px; }
 .gift { display: flex; flex-direction: column; gap: .7rem; }
 .gift h3 { margin: 0; font-size: 1.3rem; line-height: 1.2; padding-right: 40px; }
-.gift .cat { font-size: .74rem; letter-spacing: .2em; color: var(--rose); display: flex; justify-content: space-between; }
+.gift .cat { font-size: .74rem; letter-spacing: .2em; color: var(--rose); display: flex; justify-content: space-between; padding-right: 62px; }
 .gift .why { margin: 0 0 .6rem; color: var(--muted); font-size: .9rem; flex: 1; }
 .gift .links a { font-size: .8rem; padding: .22rem .65rem; }
 .g-art { position: absolute; top: 24px; right: 14px; width: 46px; opacity: .9; }

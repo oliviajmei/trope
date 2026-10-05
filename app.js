@@ -335,9 +335,11 @@ function askText(title, placeholder = '', value = '') {
   });
 }
 const swatches = (pal, cls = '') => `<div class="swatches ${cls}">${pal.map(c => `<span style="--c:${c.hex};flex:${Math.max(.35, c.w * 6)}" title="${esc(nameColor(c.hex))}"></span>`).join('')}</div>`;
-const art = (id, cls) => `<img class="art ${cls}" src="assets/${id}.webp" alt="" aria-hidden="true" decoding="async">`;
-const header = (eyebrow, title, lead, flower = 'pink') => `<header class="vhead">${art(flower, 'vh-art')}<p class="eyebrow">${eyebrow}</p><h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
-const emptyMsg = text => `<div class="empty">${art('moth', 'e-moth')}<p>${text}</p></div>`;
+const hashStr = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
+const art = (id, cls, rot) => `<img class="art ${cls}" src="assets/${id}.webp" alt="" aria-hidden="true" decoding="async" style="--r:${rot != null ? rot : (hashStr(id + '|' + cls) % 61) - 30}deg">`;
+const GIFT_ART = ['pink', 'teal', 'butterfly', 'mallow', 'bluebloom', 'moth'];
+const header = (eyebrow, title, lead, flower = 'bluebloom') => `<header class="vhead">${art(flower, 'vh-art')}<h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
+const emptyMsg = (text, img = 'moth') => `<div class="empty">${art(img, 'e-moth')}<p>${text}</p></div>`;
 const groupsOf = (p, imgId) => p.groups.filter(g => g.imageIds.includes(imgId));
 const possessive = p => p.name === 'Me' ? 'Your' : `${esc(p.name)}’s`;
 const searchLinks = q => {
@@ -377,7 +379,7 @@ views.collect = () => {
       <button class="check" data-act="sel" data-id="${i.id}" aria-pressed="${state.sel.has(i.id)}" aria-label="Select image">✓</button>
       <span class="dots">${groupsOf(p, i.id).map(g => `<i style="--c:${g.color}"></i>`).join('')}</span>
     </div>`).join('')}</div>`
-    : emptyMsg(p.images.length ? 'Nothing pressed here yet.' : 'Start with five to ten images. The more varied they are, the better the groups.')}
+    : emptyMsg(p.images.length ? 'Nothing pressed here yet.' : 'Start with five to ten images. The more varied they are, the better the groups.', 'butterfly')}
   <div class="smart">
     <p><strong>Smart analysis:</strong> ${state.mlStatus ? esc(state.mlStatus) : state.smart ? 'On. Trope reads subjects and style (botanical, moths, grain…), not just colour. It all runs on your device.' : 'Off. Turn on to match by subject and style, not just colour. Runs on your device with an open model and no AI service. One-time ~100&nbsp;MB download.'}</p>
     <button class="${state.smart ? 'ghost' : 'primary'}" data-act="smart" ${state.mlStatus ? 'disabled' : ''}>${state.smart ? 'Turn off' : 'Turn on'}</button>
@@ -387,7 +389,7 @@ views.collect = () => {
 
 views.aesthetics = () => {
   const p = prof();
-  return `${header('Aesthetics', 'Not everything fits in one.', 'Group images into separate aesthetics, each with its own palette and mood. Then choose which ones feed into the blend that becomes “mine”.', 'mallow')}
+  return `${header('Aesthetics', 'Not everything fits in one.', 'Group images into separate aesthetics, each with its own palette and mood. Then choose which ones feed into the blend that becomes “mine”.', 'teal')}
   <div class="row" style="margin-bottom:1.6rem">
     <button class="primary" data-act="newgroup">New aesthetic</button>
     <button class="ghost" data-act="suggest">Suggest groups from my images</button>
@@ -416,13 +418,13 @@ function meter(l, r, v) { return `<div class="meter"><div class="lab"><span>${l}
 
 views.mine = () => {
   const p = prof(), pr = mineProfile(p);
-  if (!pr.stats) return `${header('Mine', `${possessive(p)} aesthetic`, 'Blend your aesthetics into one.', 'moth')}<p class="empty">Add some images first. This page then turns them into a palette, a mood, and search terms.</p>`;
+  if (!pr.stats) return `${header('Mine', `${possessive(p)} aesthetic`, 'Blend your aesthetics into one.', 'butterfly')}<p class="empty">Add some images first. This page then turns them into a palette, a mood, and search terms.</p>`;
   const st = pr.stats, names = pr.palette.slice(0, 3).map(c => nameColor(c.hex));
   const sentence = `${possessive(p)} aesthetic is ${pr.traits.length ? list(pr.traits) : 'balanced'}, built around ${list(names)}.${pr.keywords.length ? ` Recurring threads: ${list(pr.keywords.slice(0, 4))}.` : ''}`;
   const active = p.groups.filter(g => g.inMine && g.weight > 0);
   const tw = active.reduce((a, g) => a + g.weight, 0) || 1;
   const q = [...pr.keywords.slice(0, 2), ...names.slice(0, 2)].join(' ');
-  return `${header('Mine', `${possessive(p)} aesthetic`, 'Blended from the aesthetics you included. Adjust the mix on the Aesthetics page.', 'moth')}
+  return `${header('Mine', `${possessive(p)} aesthetic`, 'Blended from the aesthetics you included. Adjust the mix on the Aesthetics page.', 'butterfly')}
   <div class="mine-grid">
     <section class="card fade">
       <p class="statement">${esc(sentence)}</p>
@@ -451,7 +453,7 @@ views.match = () => {
   const p = prof(), pr = mineProfile(p), m = state.match;
   const head = header('Match', 'Does it fit?', `Drop in a photo of anything (a bag, a lamp, a dress) and see how well it sits inside ${p.name === 'Me' ? 'your' : esc(p.name) + '’s'} aesthetic.`, 'insect');
   if (!pr.stats) return `${head}<p class="empty">Build an aesthetic first (Collect), then come back to test items against it.</p>`;
-  if (!m) return `${head}<div class="drop" id="drop">${art('mallow', 'dz-l')}${art('moth', 'dz-r')}<p class="big">Show me something</p><p class="muted">drop an item, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="matchbrowse">Choose an image</button></p></div>`;
+  if (!m) return `${head}<div class="drop" id="drop">${art('pink', 'dz-l')}${art('butterfly', 'dz-r')}<p class="big">Show me something</p><p class="muted">drop an item, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="matchbrowse">Choose an image</button></p></div>`;
   const total = matchScore(m, pr);
   const verdict = total >= 80 ? 'Right at home.' : total >= 60 ? 'Close, and it fits with a little styling.' : total >= 40 ? 'Adjacent, and it works as an accent piece.' : 'Off-vibe for this aesthetic.';
   const per = p.groups.map(g => ({ g, s: matchScore(m, groupProfile(p, g)) })).filter(x => x.s !== null).sort((a, b) => b.s - a.s);
@@ -547,10 +549,10 @@ views.gifts = () => {
     .sort((a, b) => b.score - a.score).slice(0, 9);
 
   const color = pr.palette[0] ? nameColor(pr.palette[0].hex) : '';
-  const cards = scored.map(({ idea, hitT, hitK }) => {
+  const cards = scored.map(({ idea, hitT, hitK }, gi) => {
     const why = [hitK.length ? `your “${hitK[0]}” thread` : '', hitT.length ? `a ${list(hitT)} mood` : ''].filter(Boolean);
     return `<article class="card gift fade">
-      ${art('pink', 'g-art')}
+      ${art(GIFT_ART[gi % GIFT_ART.length], 'g-art', ((gi * 53) % 80) - 40)}
       <div class="cat"><span>${idea[1]}</span><span>${'$'.repeat(idea[2])}</span></div>
       <h3>${idea[0]}</h3>
       <p class="why">${why.length ? `Fits ${list(why)}.` : 'A softer match, but an adventurous pick.'}</p>
