@@ -229,7 +229,7 @@ const ml = {
   p: null, vocab: null, ideas: null,
   load() {
     if (this.p) return this.p;
-    this.p = (async () => {
+    const attempt = async () => {
       const T = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1');
       const id = 'Xenova/clip-vit-base-patch32', o = { dtype: 'q8' };
       state.mlStatus = 'Downloading the on-device model (first time only)…'; render();
@@ -241,7 +241,10 @@ const ml = {
       this.vocab = await this.texts(VOCAB.map(v => `a ${v[1]} aesthetic`));
       this.ideas = await this.texts(IDEAS.map(i => `a photo of ${i[0].toLowerCase()}`));
       state.mlStatus = '';
-    })().catch(e => { this.p = null; state.mlStatus = ''; throw e; });
+    };
+    /* downloads can fail transiently, so retry a couple of times before giving up */
+    this.p = (async () => { for (let i = 0; ; i++) { try { return await attempt(); } catch (e) { if (i >= 2) throw e; await new Promise(r => setTimeout(r, 1500 * (i + 1))); } } })()
+      .catch(e => { this.p = null; state.mlStatus = ''; throw e; });
     return this.p;
   },
   async image(src) {
@@ -313,6 +316,11 @@ async function addFiles(files) {
   if (n && state.smart && ml.p) embedMissing();
 }
 
+async function setFindFile(file) {
+  if (!file || !file.type.startsWith('image/')) return toast('Please choose an image');
+  try { startFind(await readImage(file, 720)); } catch { toast('Could not read that image'); }
+}
+
 async function setMatchFile(file) {
   if (!file || !file.type.startsWith('image/')) return toast('Please choose an image');
   try { state.match = await readImage(file, 560); } catch { return toast('Could not read that image'); }
@@ -338,7 +346,7 @@ const swatches = (pal, cls = '') => `<div class="swatches ${cls}">${pal.map(c =>
 const hashStr = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
 const art = (id, cls, rot) => `<img class="art ${cls}" src="assets/${id}.webp" alt="" aria-hidden="true" decoding="async" style="--r:${rot != null ? rot : (hashStr(id + '|' + cls) % 61) - 30}deg">`;
 const GIFT_ART = ['pink', 'teal', 'butterfly', 'mallow', 'bluebloom', 'moth'];
-const header = (eyebrow, title, lead, flower = 'bluebloom') => `<header class="vhead">${art(flower, 'vh-art')}<h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1><img class="flourish" src="assets/band.webp" alt="" aria-hidden="true" decoding="async">${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
+const header = (eyebrow, title, lead, flower = 'bluebloom') => `<header class="vhead">${art(flower, 'vh-art')}<h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
 const emptyMsg = (text, img = 'moth') => `<div class="empty">${art(img, 'e-moth')}<p>${text}</p></div>`;
 const groupsOf = (p, imgId) => p.groups.filter(g => g.imageIds.includes(imgId));
 const possessive = p => p.name === 'Me' ? 'Your' : `${esc(p.name)}’s`;
@@ -423,7 +431,6 @@ views.mine = () => {
   const sentence = `${possessive(p)} aesthetic is ${pr.traits.length ? list(pr.traits) : 'balanced'}, built around ${list(names)}.${pr.keywords.length ? ` Recurring threads: ${list(pr.keywords.slice(0, 4))}.` : ''}`;
   const active = p.groups.filter(g => g.inMine && g.weight > 0);
   const tw = active.reduce((a, g) => a + g.weight, 0) || 1;
-  const q = [...pr.keywords.slice(0, 2), ...names.slice(0, 2)].join(' ');
   return `${header('Mine', `${possessive(p)} aesthetic`, 'Blended from the aesthetics you included. Adjust the mix on the Aesthetics page.', 'butterfly')}
   <div class="mine-grid">
     <section class="card fade">
@@ -441,10 +448,10 @@ views.mine = () => {
       : `<p class="muted">Blending all ${pr.count} images (no groups included yet).</p>`}
     </section>
     <section class="card fade">
-      <h2 class="sub">Hunt for it</h2>
-      <p class="muted small">Search terms built from your palette and keywords: <b>${esc(q || 'none yet')}</b></p>
-      ${q ? searchLinks(q) : ''}
-      <p class="muted small" style="margin-top:1rem">Or <button class="link" data-act="goto" data-v="match">test a specific item</button> · <button class="link" data-act="goto" data-v="gifts">get gift ideas</button></p>
+      <h2 class="sub">Find clothes</h2>
+      <p class="muted small">Show Trope a piece you love. It reads the silhouette, pattern and colors, then searches Depop, Vinted, AliExpress, SHEIN and ethical brands for matches.</p>
+      <p><button class="primary" data-act="goto" data-v="find">Open the finder</button></p>
+      <p class="muted small" style="margin-top:1rem">Or <button class="link" data-act="goto" data-v="match">test an item</button> or <button class="link" data-act="goto" data-v="gifts">get gift ideas</button>.</p>
     </section>
   </div>`;
 };
@@ -469,6 +476,7 @@ views.match = () => {
       <div class="row" style="margin-top:1.6rem">
         <button class="primary" data-act="matchsave">Add to my collection</button>
         <button class="ghost" data-act="matchbrowse">Try another</button>
+        <button class="ghost" data-act="matchfind">Find clothes like this</button>
         ${searchLinks(`${nameColor(m.palette[0].hex)} ${pr.keywords[0] || ''}`.trim())}
       </div>
     </div>
@@ -562,6 +570,249 @@ views.gifts = () => {
   return `${head}${controls}${cards ? `<div class="ggrid">${cards}</div><p style="margin-top:1.6rem"><button class="ghost" data-act="shuffle">Shuffle ideas</button></p>` : '<p class="empty">No ideas match those filters. Try another category or budget.</p>'}`;
 };
 
+/* ---------------- clothing finder ----------------
+   Reads an item's silhouette (shape geometry), pattern (edge orientation + periodicity)
+   and colours on-device, optionally names the garment with the on-device CLIP model,
+   then builds a search phrase for shops and reverse-image search. No AI service involved. */
+const GARMENTS = [
+  ['dress', 'a photo of a dress'], ['maxi dress', 'a photo of a long maxi dress'], ['mini dress', 'a photo of a short mini dress'],
+  ['midi skirt', 'a photo of a midi skirt'], ['mini skirt', 'a photo of a mini skirt'], ['maxi skirt', 'a photo of a long maxi skirt'],
+  ['trousers', 'a photo of trousers'], ['wide-leg pants', 'a photo of wide-leg pants'], ['jeans', 'a photo of jeans'], ['shorts', 'a photo of shorts'],
+  ['top', 'a photo of a top'], ['blouse', 'a photo of a blouse'], ['t-shirt', 'a photo of a t-shirt'], ['corset top', 'a photo of a corset top'],
+  ['cardigan', 'a photo of a cardigan'], ['sweater', 'a photo of a sweater'], ['hoodie', 'a photo of a hoodie'], ['jacket', 'a photo of a jacket'],
+  ['coat', 'a photo of a long coat'], ['blazer', 'a photo of a blazer'], ['vest', 'a photo of a vest'], ['jumpsuit', 'a photo of a jumpsuit'],
+  ['swimsuit', 'a photo of a swimsuit'], ['shoes', 'a photo of shoes'], ['boots', 'a photo of boots'], ['bag', 'a photo of a handbag'],
+  ['scarf', 'a photo of a scarf'], ['jewelry', 'a photo of jewelry']
+];
+const FABRICS = [
+  ['sheer', 'a sheer see-through fabric'], ['satin', 'shiny satin fabric'], ['velvet', 'velvet fabric'], ['lace', 'lace fabric'], ['denim', 'denim fabric'],
+  ['knit', 'chunky knit fabric'], ['crochet', 'crochet fabric'], ['corduroy', 'corduroy fabric'], ['leather', 'leather'], ['mesh', 'mesh fabric'],
+  ['linen', 'linen fabric'], ['embroidered', 'embroidered fabric'], ['sequin', 'sequin fabric'], ['ruffle', 'ruffles'], ['pleated', 'pleated fabric'],
+  ['puff sleeve', 'puff sleeves'], ['bow', 'bows'], ['lace-up', 'lace-up ties'], ['cut-out', 'cut-out details'], ['floral', 'a floral print'],
+  ['striped', 'stripes'], ['plaid', 'plaid check'], ['gingham', 'gingham check'], ['polka dot', 'polka dots'], ['animal print', 'leopard animal print'],
+  ['tie-dye', 'tie-dye'], ['paisley', 'paisley print']
+];
+const FITS = [
+  ['oversized', 'an oversized baggy garment'], ['fitted', 'a fitted bodycon garment'], ['a-line', 'an a-line garment'], ['flowy', 'a flowy loose garment'],
+  ['cropped', 'a cropped garment'], ['wide-leg', 'wide leg'], ['flared', 'a flared garment'], ['pencil', 'a pencil fit garment'], ['wrap', 'a wrap garment'],
+  ['halter', 'a halter neckline'], ['strapless', 'strapless'], ['off-shoulder', 'off the shoulder'], ['long sleeve', 'long sleeves'], ['sleeveless', 'sleeveless']
+];
+const TYPE_CHIPS = ['dress', 'skirt', 'top', 'pants', 'jacket', 'coat', 'sweater', 'shoes', 'bag'];
+
+const SHOPS = [
+  ['Secondhand and marketplaces', [
+    ['Depop', q => `https://www.depop.com/search/?q=${plus(q)}`], ['Vinted', q => `https://www.vinted.com/catalog?search_text=${plus(q)}`],
+    ['Poshmark', q => `https://poshmark.com/search?query=${plus(q)}`], ['eBay', q => `https://www.ebay.com/sch/i.html?_nkw=${plus(q)}`],
+    ['Etsy', q => `https://www.etsy.com/search?q=${plus(q)}`], ['ThredUp', q => `https://www.thredup.com/products?search_text=${plus(q)}`],
+    ['Mercari', q => `https://www.mercari.com/search/?keyword=${plus(q)}`]]],
+  ['Budget fast fashion', [
+    ['AliExpress', q => `https://www.aliexpress.com/w/wholesale-${q.trim().replace(/\s+/g, '-')}.html`], ['SHEIN', q => `https://us.shein.com/pdsearch/${encodeURIComponent(q)}/`]]],
+  ['Ethical and niche brands', [
+    ['Reformation', q => `https://www.thereformation.com/search?q=${plus(q)}`], ['Christy Dawn', q => `https://christydawn.com/search?q=${plus(q)}`],
+    ['Doen', q => `https://www.shopdoen.com/search?q=${plus(q)}`], ['Lisa Says Gah', q => `https://lisasaysgah.com/search?q=${plus(q)}`],
+    ['Mara Hoffman', q => `https://marahoffman.com/search?q=${plus(q)}`], ['Girlfriend Collective', q => `https://girlfriend.com/search?q=${plus(q)}`],
+    ['Reclaimed Vintage', q => `https://www.reclaimedvintage.com/search?q=${plus(q)}`], ['Pact', q => `https://wearpact.com/search?q=${plus(q)}`],
+    ['Eileen Fisher', q => `https://www.eileenfisher.com/search?q=${plus(q)}`]]]
+];
+const plus = q => encodeURIComponent(q.trim()).replace(/%20/g, '+');
+
+function loadCanvas(src, max) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => {
+      const sc = Math.min(1, max / Math.max(im.width, im.height));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.width * sc)); c.height = Math.max(1, Math.round(im.height * sc));
+      c.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0, c.width, c.height); res(c);
+    };
+    im.onerror = rej; im.src = src;
+  });
+}
+
+/* Separable box dilate/erode via running sums (merges nearby pieces, e.g. white stripes that match the backdrop). */
+function boxMorph(src, W, H, r, erode) {
+  const need = erode ? 2 * r + 1 : 1, tmp = new Uint8Array(W * H), out = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) { let sum = 0; for (let x = -r; x < W + r; x++) { const add = x + r, rem = x - r - 1; if (add < W && add >= 0) sum += src[y * W + add]; if (rem >= 0 && rem < W) sum -= src[y * W + rem]; if (x >= 0 && x < W) tmp[y * W + x] = erode ? (sum === need && x - r >= 0 && x + r < W ? 1 : 0) : (sum > 0 ? 1 : 0); } }
+  for (let x = 0; x < W; x++) { let sum = 0; for (let y = -r; y < H + r; y++) { const add = y + r, rem = y - r - 1; if (add < H && add >= 0) sum += tmp[add * W + x]; if (rem >= 0 && rem < H) sum -= tmp[rem * W + x]; if (y >= 0 && y < H) out[y * W + x] = erode ? (sum === need && y - r >= 0 && y + r < H ? 1 : 0) : (sum > 0 ? 1 : 0); } }
+  return out;
+}
+
+/* Cut the item out from its (plain) background: the largest region unlike the border colour, closed and hole-filled. */
+function segmentItem(c) {
+  const W = c.width, H = c.height, d = c.getContext('2d').getImageData(0, 0, W, H).data, N = W * H;
+  const R = [], G = [], B = [], b = Math.max(2, Math.round(Math.min(W, H) * .03));
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (x < b || y < b || x >= W - b || y >= H - b) { const i = (y * W + x) * 4; R.push(d[i]); G.push(d[i + 1]); B.push(d[i + 2]); }
+  const med = a => a.sort((p, q) => p - q)[a.length >> 1], bg = [med(R), med(G), med(B)];
+  const raw0 = new Uint8Array(N);
+  for (let p = 0; p < N; p++) { const i = p * 4; raw0[p] = Math.hypot(d[i] - bg[0], d[i + 1] - bg[1], d[i + 2] - bg[2]) / 255 > .1 ? 1 : 0; }
+  const cr = Math.max(2, Math.round(Math.min(W, H) * .045)), raw = boxMorph(boxMorph(raw0, W, H, cr, false), W, H, cr, true);
+  const lab = new Int32Array(N), q = new Int32Array(N); let best = 0, bestN = 0, nl = 0;
+  for (let s = 0; s < N; s++) if (raw[s] && !lab[s]) {
+    nl++; let h0 = 0, t0 = 0; q[t0++] = s; lab[s] = nl;
+    while (h0 < t0) { const p = q[h0++], x = p % W, y = (p / W) | 0;
+      if (x > 0 && raw[p - 1] && !lab[p - 1]) { lab[p - 1] = nl; q[t0++] = p - 1; } if (x < W - 1 && raw[p + 1] && !lab[p + 1]) { lab[p + 1] = nl; q[t0++] = p + 1; }
+      if (y > 0 && raw[p - W] && !lab[p - W]) { lab[p - W] = nl; q[t0++] = p - W; } if (y < H - 1 && raw[p + W] && !lab[p + W]) { lab[p + W] = nl; q[t0++] = p + W; } }
+    if (t0 > bestN) { bestN = t0; best = nl; }
+  }
+  const mask = new Uint8Array(N); for (let p = 0; p < N; p++) mask[p] = lab[p] === best && best ? 1 : 0;
+  // fill enclosed holes: anything the border flood-fill can't reach is inside the item
+  const reach = new Uint8Array(N); let h1 = 0, t1 = 0; const push = p => { if (!mask[p] && !reach[p]) { reach[p] = 1; q[t1++] = p; } };
+  for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); } for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+  while (h1 < t1) { const p = q[h1++], x = p % W, y = (p / W) | 0; if (x > 0) push(p - 1); if (x < W - 1) push(p + 1); if (y > 0) push(p - W); if (y < H - 1) push(p + W); }
+  let x0 = W, y0 = H, x1 = 0, y1 = 0, area = 0;
+  for (let p = 0; p < N; p++) { if (!reach[p]) { mask[p] = 1; area++; const x = p % W, y = (p / W) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+  return { mask, W, H, bbox: [x0, y0, x1, y1], area, coverage: area / N, ok: area / N > .04 && area / N < .92 };
+}
+
+/* The item's own colours, ignoring the backdrop. */
+function maskedPalette(c, seg) {
+  const d = c.getContext('2d').getImageData(0, 0, seg.W, seg.H).data, bk = new Map();
+  for (let p = 0; p < seg.W * seg.H; p++) { if (!seg.mask[p]) continue; const i = p * 4, k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4); const e = bk.get(k) || { n: 0, r: 0, g: 0, b: 0 }; e.n++; e.r += d[i]; e.g += d[i + 1]; e.b += d[i + 2]; bk.set(k, e); }
+  return mergePalette([...bk.values()].map(e => ({ hex: rgb2hex([e.r / e.n, e.g / e.n, e.b / e.n]), w: e.n })), 5, 12);
+}
+
+/* Silhouette from the cut-out's width profile (works on flat-lay and product shots). */
+function silhouetteOf(seg) {
+  if (!seg.ok) return { tags: [], ok: false };
+  const { mask, W, bbox: [x0, y0, x1, y1] } = seg, bw = x1 - x0 + 1, bh = y1 - y0 + 1, BANDS = 12, wd = new Array(BANDS).fill(0);
+  for (let k = 0; k < BANDS; k++) {
+    const ya = y0 + Math.floor(k * bh / BANDS), yb = Math.max(y0 + Math.floor((k + 1) * bh / BANDS), ya + 1); let tot = 0, n = 0;
+    for (let y = ya; y < yb; y++) { let cnt = 0; for (let x = x0; x <= x1; x++) cnt += mask[y * W + x]; tot += cnt; n++; }
+    wd[k] = tot / n / bw;
+  }
+  const shoulder = Math.max(...wd.slice(0, 4)), hem = Math.max(...wd.slice(8, 12)), waist = Math.min(...wd.slice(3, 8));
+  const aspect = bh / bw, fill = seg.area / (bw * bh), taper = hem / Math.max(shoulder, .01), tags = [];
+  if (aspect > 1.9) tags.push('long'); else if (aspect < .8) tags.push('cropped');
+  if (taper > 1.3) tags.push('a-line'); else if (taper < .75) tags.push('tapered');
+  if (waist / Math.max(Math.min(shoulder, hem), .01) < .75) tags.push('cinched waist');
+  if (fill > .78 && aspect < 1.15) tags.push('boxy');
+  return { tags: tags.slice(0, 3), aspect, taper, fill, ok: true };
+}
+
+/* Pattern from edge orientation and repetition, compared against a short list of known patterns. */
+function patternOf(c, seg, palette) {
+  const { mask, W, H } = seg; if (!seg.ok) return { name: 'solid', energy: 0 };
+  const g = c.getContext('2d').getImageData(0, 0, W, H).data, gray = new Float32Array(W * H);
+  for (let p = 0; p < W * H; p++) gray[p] = .299 * g[p * 4] + .587 * g[p * 4 + 1] + .114 * g[p * 4 + 2];
+  const inner = new Uint8Array(W * H), r = 3;
+  for (let y = r; y < H - r; y++) for (let x = r; x < W - r; x++) { const p = y * W + x; if (!mask[p]) continue; let ok = 1; for (let dy = -r; dy <= r && ok; dy += r) for (let dx = -r; dx <= r; dx += r) if (!mask[p + dy * W + dx]) { ok = 0; break; } inner[p] = ok; }
+  let Eh = 0, Ev = 0, n = 0; const [x0, y0, x1, y1] = seg.bbox, rows = [], cols = [];
+  for (let y = y0 + 1; y < y1; y++) for (let x = x0 + 1; x < x1; x++) { const p = y * W + x; if (inner[p] && inner[p - 1] && inner[p + 1] && inner[p - W] && inner[p + W]) { Ev += Math.abs(gray[p + 1] - gray[p - 1]); Eh += Math.abs(gray[p + W] - gray[p - W]); n++; } }
+  if (n < 80) return { name: 'solid', energy: 0 };
+  const prof = (len, at) => { const a = []; for (let i = 0; i < len; i++) { let s = 0, k = 0; at(i, v => { s += v; k++; }); a.push(k > 5 ? s / k : null); } return a.filter(v => v !== null); };
+  const rp = prof(y1 - y0 + 1, (i, add) => { const y = y0 + i; for (let x = x0; x <= x1; x++) if (inner[y * W + x]) add(gray[y * W + x]); });
+  const cp = prof(x1 - x0 + 1, (i, add) => { const x = x0 + i; for (let y = y0; y <= y1; y++) if (inner[y * W + x]) add(gray[y * W + x]); });
+  const periodic = a => {
+    if (a.length < 24) return false; const m = a.reduce((s, v) => s + v, 0) / a.length, z = a.map(v => v - m), v0 = z.reduce((s, v) => s + v * v, 0) / a.length;
+    if (Math.sqrt(v0) < 6) return false; let best = 0;
+    for (let l = 3; l < a.length / 3; l++) { let s = 0; for (let i = 0; i + l < a.length; i++) s += z[i] * z[i + l]; const rr = s / (a.length - l) / v0; if (rr > best) best = rr; }
+    return best > .5;
+  };
+  const hs = periodic(rp), vs = periodic(cp), energy = (Eh + Ev) / n / 255, multi = palette.filter(p => p.w > .1).length >= 4;
+  let name = 'solid';
+  if (hs && vs) name = 'plaid'; else if (hs || vs) name = 'striped'; else if (energy < .03 && palette[0].w > .45) name = 'solid'; else if (multi) name = 'print'; else if (energy > .06) name = 'textured';
+  return { name, energy, hs, vs };
+}
+
+async function zeroShot(emb, list, n, key) {
+  ml.zs = ml.zs || {}; if (!ml.zs[key]) ml.zs[key] = await ml.texts(list.map(x => x[1]));
+  const sims = ml.zs[key].map(t => dot(t, emb) * 100), mx = Math.max(...sims), ex = sims.map(s => Math.exp(s - mx)), sum = ex.reduce((a, b) => a + b);
+  return list.map((x, i) => [x[0], ex[i] / sum]).sort((a, b) => b[1] - a[1]).slice(0, n);
+}
+
+function addTag(f, k, v, on) { if (!f.tags.some(t => t.v === v)) f.tags.push({ k, v, on }); }
+function findQuery(f) {
+  const w = []; for (const k of ['color', 'det', 'pat', 'sil', 'type']) f.tags.filter(t => t.k === k && t.on).forEach(t => w.push(t.v));
+  if (f.aes) { const kw = mineProfile(prof()).keywords[0]; if (kw) w.push(kw); }
+  if (f.extra) w.push(f.extra);
+  const seen = new Set(); return w.join(' ').split(/\s+/).filter(x => x && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase())).join(' ');
+}
+
+async function startFind(rec) {
+  const f = { src: rec.src, palette: rec.palette, stats: rec.stats, emb: rec.emb || null, tags: [], extra: '', aes: false, busy: true, urlText: state.find && state.find.urlText || '' };
+  state.find = f; state.view = 'find'; render();
+  try {
+    const c = await loadCanvas(rec.src, 200), seg = segmentItem(c);
+    f.sil = silhouetteOf(seg); if (seg.ok) f.palette = maskedPalette(c, seg); f.pat = patternOf(c, seg, f.palette); f.segOk = seg.ok;
+  } catch { f.sil = { tags: [], ok: false }; f.pat = { name: 'solid' }; f.segOk = false; }
+  f.palette.slice(0, 2).forEach((c, i) => { if (i === 0 || c.w > .2) addTag(f, 'color', nameColor(c.hex), i === 0); });
+  if (f.pat.name !== 'solid') addTag(f, 'pat', f.pat.name, true);
+  f.sil.tags.forEach((v, i) => addTag(f, 'sil', v, i < 2));
+  TYPE_CHIPS.forEach(v => addTag(f, 'type', v, false));
+  f.pngP = new Promise(res => loadCanvas(rec.src, 1200).then(cv => cv.toBlob(res, 'image/png'))).catch(() => null);
+  f.busy = false; if (state.find === f) render();
+  if (state.smart) clipRead(f);
+}
+
+async function clipRead(f) {
+  try {
+    await ml.load(); if (state.find !== f) return;
+    f.reading = true; render();
+    if (!f.emb) f.emb = await ml.image(f.src);
+    const [types, fabrics, fits] = await Promise.all([zeroShot(f.emb, GARMENTS, 2, 'g'), zeroShot(f.emb, FABRICS, 3, 'f'), zeroShot(f.emb, FITS, 2, 's')]);
+    if (state.find !== f) return;
+    f.tags = f.tags.filter(t => !(t.k === 'type' && !t.on)); f.hasClip = true;
+    types.forEach(([v], i) => { const old = f.tags.find(t => t.v === v); if (old) old.on = i === 0 || old.on; else f.tags.push({ k: 'type', v, on: i === 0 }); });
+    fabrics.forEach(([v], i) => addTag(f, 'det', v, i < 2));
+    fits.forEach(([v], i) => addTag(f, 'sil', v, i < 1));
+  } catch { f.clipFail = true; }
+  f.reading = false; if (state.find === f) render();
+}
+
+function postForm(action, fields) {
+  const fm = document.createElement('form'); fm.method = 'POST'; fm.action = action; fm.target = '_blank'; fm.enctype = 'multipart/form-data'; fm.style.display = 'none';
+  for (const [k, v] of Object.entries(fields)) { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; fm.appendChild(i); }
+  document.body.appendChild(fm); fm.submit(); setTimeout(() => fm.remove(), 1500);
+}
+
+views.find = () => {
+  const p = prof(), f = state.find;
+  const head = header('Find', 'Find the piece', 'Show Trope something you love. It reads the silhouette, pattern and colors, then searches for it in shops and by image.', 'butterfly');
+  if (!f) {
+    const thumbs = p.images.slice(0, 24).map(i => `<button class="thumb" data-act="findpick" data-id="${i.id}" aria-label="Use this image"><img src="${i.src}" alt=""></button>`).join('');
+    return `${head}<div class="drop" id="drop">${art('teal', 'dz-l')}${art('butterfly', 'dz-r')}<p class="big">Show me the piece</p><p class="muted">drop a photo of a garment, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="findbrowse">Choose an image</button></p></div>
+    ${thumbs ? `<h2 class="sub">Or pick from your collection</h2><div class="thumbs">${thumbs}</div>` : ''}
+    <p class="note">Works best with one item on a plain background, like a product or flat-lay photo.</p>`;
+  }
+  const pr = mineProfile(p), fit = pr.stats ? matchScore({ palette: f.palette, stats: f.stats, emb: f.emb }, pr) : null;
+  const q = findQuery(f), enc = encodeURIComponent(f.urlText || '');
+  const group = (label, k) => { const idx = f.tags.map((t, i) => [t, i]).filter(([t]) => t.k === k); return idx.length ? `<div class="ctl"><span>${label}</span><div class="chips">${idx.map(([t, i]) => `<button class="chip" data-act="ftag" data-i="${i}" aria-pressed="${t.on}">${esc(t.v)}</button>`).join('')}</div></div>` : ''; };
+  const smartLine = state.smart ? (f.reading ? 'Reading the garment type and fabric on your device…' : f.hasClip ? 'Garment type and fabric were read by the on-device model.' : f.clipFail ? 'Could not run smart analysis, so choose the item type yourself.' : '')
+    : `Choose the item type below, or <button class="link" data-act="fsmart">turn on smart analysis</button> to have it detected on your device.`;
+  return `${head}
+  <div class="find-grid">
+    <div>
+      <img class="matchimg" src="${f.src}" alt="Item to find">
+      <div style="margin-top:1rem">${swatches(f.palette, 'slim')}</div>
+      ${fit !== null ? `<p class="muted small" style="margin-top:.8rem">Fits ${possessive(p).toLowerCase()} aesthetic: <b>${fit}%</b></p>` : ''}
+      <p style="margin-top:1rem"><button class="ghost" data-act="freset">Use a different item</button></p>
+    </div>
+    <div class="find-main">
+      <section class="card fade">
+        <h2 class="sub">What I see</h2>
+        ${f.segOk ? '' : '<p class="muted small">The item is hard to separate from its background, so the silhouette reading is rough. A plain background helps.</p>'}
+        ${group('Item', 'type')}${group('Color', 'color')}${group('Silhouette', 'sil')}${group('Fabric and details', 'det')}${group('Pattern', 'pat')}
+        <p class="muted small">${smartLine}</p>
+        <div class="ctl"><span>Extra words</span><input type="text" data-change="fextra" value="${esc(f.extra)}" placeholder="vintage, 90s, linen…" maxlength="40"></div>
+        <label class="inline"><input type="checkbox" data-change="faes" ${f.aes ? 'checked' : ''}> Add my aesthetic keyword</label>
+        <p class="phrase">Searching for: <b>${esc(q || 'pick a few tags above')}</b></p>
+      </section>
+      <section class="card fade">
+        <h2 class="sub">Search by image</h2>
+        <p class="muted small">Bing matches the actual photo and lists shopping results. Google Lens needs a paste: the image is copied for you.</p>
+        <div class="row"><button class="primary" data-act="fbing">Bing visual search</button><button class="ghost" data-act="flens">Google Lens</button></div>
+        <div class="ctl" style="margin-top:1rem"><span>Or search by a picture's web address</span><input type="text" data-change="furl" value="${esc(f.urlText)}" placeholder="Paste an image link from Depop, Pinterest…"></div>
+        ${f.urlText ? `<div class="links"><a class="chip" target="_blank" rel="noopener" href="https://lens.google.com/uploadbyurl?url=${enc}">Google Lens</a><a class="chip" target="_blank" rel="noopener" href="https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:${enc}">Bing</a><a class="chip" target="_blank" rel="noopener" href="https://yandex.com/images/search?rpt=imageview&url=${enc}">Yandex</a><a class="chip" target="_blank" rel="noopener" href="https://tineye.com/search?url=${enc}">TinEye</a></div>` : ''}
+        <p class="muted small" style="margin-top:1rem">Depop, AliExpress and SHEIN only offer photo search inside their apps. Bing and Lens do index their listings, and the shop links below use each store's own search.</p>
+      </section>
+      <section class="card fade">
+        <h2 class="sub">Shop this look</h2>
+        ${q ? SHOPS.map(([label, shops]) => `<div class="ctl shopgroup"><span>${label}</span><div class="links">${shops.map(([n, u]) => `<a class="chip" target="_blank" rel="noopener" href="${esc(u(q))}">${n}</a>`).join('')}</div></div>`).join('') : '<p class="muted">Pick a few tags above to build a search.</p>'}
+        <p class="muted small">Ethical here means the brand markets sustainable or fair-made practices, so check a brand on <a href="https://directory.goodonyou.eco/" target="_blank" rel="noopener">Good On You</a> before buying.</p>
+      </section>
+    </div>
+  </div>`;
+};
+
 /* ---------------- render ---------------- */
 function render() {
   const p = prof();
@@ -596,7 +847,7 @@ function openImage(id) {
         <p class="muted small" style="margin:.6rem 0 0">${list(im.palette.slice(0, 4).map(c => nameColor(c.hex)))}${traitsOf(im.stats).length ? ' · ' + traitsOf(im.stats).join(', ') : ''}</p></div>
       <div><h2 class="sub">Aesthetics</h2>
         ${p.groups.length ? `<div class="chips">${p.groups.map(g => `<button class="chip" data-act="togglegroup" data-g="${g.id}" data-id="${id}" aria-pressed="${g.imageIds.includes(id)}"><i class="dot" style="--c:${g.color}"></i>${esc(g.name)}</button>`).join('')}</div>` : '<p class="muted small">No aesthetics yet. Create one on the Aesthetics page.</p>'}</div>
-      <div class="row"><button class="ghost" data-act="matchthis" data-id="${id}">Test against my aesthetic</button><button class="ghost danger" data-act="delimg" data-id="${id}">Delete</button><button class="primary" data-close>Close</button></div>
+      <div class="row"><button class="ghost" data-act="matchthis" data-id="${id}">Test against my aesthetic</button><button class="ghost" data-act="findthis" data-id="${id}">Find clothes like this</button><button class="ghost danger" data-act="delimg" data-id="${id}">Delete</button><button class="primary" data-close>Close</button></div>
     </div></div>`;
   if (!d.open) d.showModal();
 }
@@ -769,6 +1020,19 @@ const actions = {
     const p = prof(), id = el.dataset.id; p.images = p.images.filter(i => i.id !== id); p.groups.forEach(g => g.imageIds = g.imageIds.filter(i => i !== id));
     $('#imgDialog').close(); save(); render();
   },
+  findbrowse() { $('#findInput').click(); },
+  findpick(el) { const im = prof().images.find(i => i.id === el.dataset.id); if (im) startFind(im); },
+  ftag(el) { const f = state.find, t = f.tags[+el.dataset.i]; if (t.k === 'type' && !t.on) f.tags.forEach(x => { if (x.k === 'type') x.on = false; }); t.on = !t.on; render(); },
+  fbing() { postForm('https://www.bing.com/images/search?view=detailv2&iss=sbiupload&FORM=SBIHMP', { imageBin: state.find.src.split(',')[1] }); },
+  flens() {
+    const f = state.find, fail = () => toast('Could not copy the image. Save it and upload it on Google Lens.');
+    try { navigator.clipboard.write([new ClipboardItem({ 'image/png': f.pngP })]).then(() => toast('Image copied. Press Ctrl+V on the Google Lens page.')).catch(fail); } catch { fail(); }
+    window.open('https://lens.google.com/', '_blank');
+  },
+  fsmart() { setSmart(true).then(() => { if (state.find && state.smart) clipRead(state.find); }); },
+  freset() { state.find = null; render(); },
+  matchfind() { if (state.match) startFind(state.match); },
+  findthis(el) { const im = prof().images.find(i => i.id === el.dataset.id); $('#imgDialog').close(); if (im) startFind(im); },
   matchthis(el) {
     const im = prof().images.find(i => i.id === el.dataset.id); state.match = im; $('#imgDialog').close(); state.view = 'match'; render();
   },
@@ -811,6 +1075,9 @@ const changes = {
     const g = prof().groups.find(g => g.id === el.value); state.sel.forEach(id => { if (!g.imageIds.includes(id)) g.imageIds.push(id); });
     toast(`Added to “${g.name}”`); state.sel.clear(); save(); render();
   },
+  fextra(el) { state.find.extra = el.value.trim(); render(); },
+  furl(el) { state.find.urlText = el.value.trim(); render(); },
+  faes(el) { state.find.aes = el.checked; render(); },
   gsource(el) { state.gift.source = el.value; render(); },
   gbudget(el) { state.gift.budget = +el.value; render(); }
 };
@@ -833,6 +1100,7 @@ document.addEventListener('keydown', e => {
 });
 
 $('#fileInput').addEventListener('change', e => { addFiles([...e.target.files]); e.target.value = ''; });
+$('#findInput').addEventListener('change', e => { setFindFile(e.target.files[0]); e.target.value = ''; });
 $('#matchInput').addEventListener('change', e => { setMatchFile(e.target.files[0]); e.target.value = ''; });
 $('#importInput').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -846,7 +1114,7 @@ $('#importInput').addEventListener('change', async e => {
 });
 
 /* drag-and-drop & paste work anywhere on the page */
-const fileDrop = files => state.view === 'match' ? setMatchFile(files[0]) : addFiles(files);
+const fileDrop = files => state.view === 'match' ? setMatchFile(files[0]) : state.view === 'find' ? setFindFile(files[0]) : addFiles(files);
 ['dragenter', 'dragover'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); const d = $('#drop'); if (d) d.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); const d = $('#drop'); if (d) d.classList.remove('over'); }));
 window.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files.length) fileDrop([...e.dataTransfer.files]); });
@@ -866,5 +1134,5 @@ window.addEventListener('paste', e => {
   }
   render();
   if (sync.cfg && sync.code) sync.pull().catch(() => {});
-  if (state.smart) ml.load().then(embedMissing).catch(() => { state.smart = false; render(); });
+  if (state.smart) ml.load().then(embedMissing).catch(() => { state.mlStatus = ''; render(); });   // keep the setting on if the download fails; it retries next visit
 })();

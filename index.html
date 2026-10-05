@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fleur+De+Leah&family=Gilda+Display&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261005h">
+<link rel="stylesheet" href="styles.css?v=20261005j">
 </head>
 <body>
 
@@ -57,6 +57,7 @@
     <button data-view="aesthetics">Aesthetics</button>
     <button data-view="mine">Mine</button>
     <button data-view="match">Match</button>
+    <button data-view="find">Find</button>
     <button data-view="gifts">Gifts</button>
   </nav>
   <button id="profileBtn" class="pill" data-act="profiles" aria-haspopup="dialog">Me</button>
@@ -90,11 +91,12 @@
 </dialog>
 
 <input id="fileInput" type="file" accept="image/*" multiple hidden>
+<input id="findInput" type="file" accept="image/*" hidden>
 <input id="matchInput" type="file" accept="image/*" hidden>
 <input id="importInput" type="file" accept="application/json" hidden>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="firebase-config.js?v=20261005h"></script>
-<script src="app.js?v=20261005h"></script>
+<script src="firebase-config.js?v=20261005j"></script>
+<script src="app.js?v=20261005j"></script>
 </body>
 </html>
