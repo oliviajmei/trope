@@ -15,7 +15,7 @@ const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const list = a => a.length < 2 ? a.join('') : a.length === 2 ? a.join(' and ') : a.slice(0, -1).join(', ') + ', and ' + a[a.length - 1];
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-const ACCENTS = ['#9fb3ff', '#c7a3c9', '#6fa3ad', '#cfe0f5', '#a8809c', '#8fc7bd'];
+const ACCENTS = ['#6fa3ad', '#d9a3b8', '#eadfc7', '#98a7a9', '#9a78d6', '#386777'];
 
 /* ---------------- storage ---------------- */
 const store = {
