@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Each device group shares one long random sync code (the document id).
+    // Documents can be fetched only by knowing the code; the top-level
+    // collection itself can never be listed, so codes can't be discovered.
+    match /sync/{code} {
+      allow get, create, update, delete: if code.size() >= 16 && code.size() <= 64;
+      match /images/{img} {
+        allow read, write: if code.size() >= 16 && code.size() <= 64;
+      }
+    }
+  }
+}

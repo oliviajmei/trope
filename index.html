@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troupe</title>
+<meta name="description" content="Troupe — build your life to be cohesive.">
+<meta name="theme-color" content="#07050f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=WindSong:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="atmosphere" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span><span class="brand-name">Troupe</span><span class="brand-tag">build your life to be cohesive</span></span></div>
+  <nav id="nav" aria-label="Sections">
+    <button data-view="collect">Collect</button>
+    <button data-view="aesthetics">Aesthetics</button>
+    <button data-view="mine">Mine</button>
+    <button data-view="match">Match</button>
+    <button data-view="gifts">Gifts</button>
+  </nav>
+  <button id="profileBtn" class="pill" data-act="profiles" aria-haspopup="dialog">Me</button>
+</header>
+
+<main id="view"></main>
+
+<footer class="foot">
+  <p id="privacy">Your images stay on this device unless you turn on sync.</p>
+  <p class="foot-actions">
+    <button class="link" data-act="sync">Sync devices</button>
+    <button class="link" data-act="export">Export backup</button>
+    <button class="link" data-act="import">Import backup</button>
+  </p>
+</footer>
+
+<div id="actionbar" class="actionbar" hidden></div>
+
+<dialog id="imgDialog" class="dlg wide"></dialog>
+<dialog id="profileDialog" class="dlg"></dialog>
+<dialog id="syncDialog" class="dlg"></dialog>
+<dialog id="textDialog" class="dlg small">
+  <form method="dialog">
+    <h2 id="textTitle" class="display sm"></h2>
+    <input id="textInput" type="text" maxlength="60" autocomplete="off">
+    <div class="row end">
+      <button type="button" class="ghost" data-close>Cancel</button>
+      <button type="submit" value="ok" class="primary">Done</button>
+    </div>
+  </form>
+</dialog>
+
+<input id="fileInput" type="file" accept="image/*" multiple hidden>
+<input id="matchInput" type="file" accept="image/*" hidden>
+<input id="importInput" type="file" accept="application/json" hidden>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
