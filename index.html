@@ -3,20 +3,125 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trope</title>
+<title>trope</title>
 <meta name="description" content="Trope — build your life to be cohesive.">
-<meta name="theme-color" content="#07050f">
+<meta name="theme-color" content="#050813">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=WindSong:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Pinyon+Script&family=WindSong:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+<!-- Botanical art + print effects, shared by every page (original drawings). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="g-lumen" cx="50%" cy="50%" r="55%">
+      <stop offset="0" stop-color="#fff" stop-opacity=".98"/>
+      <stop offset=".45" stop-color="#d4e2ff" stop-opacity=".78"/>
+      <stop offset=".8" stop-color="#7388e0" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#3a4aa0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="g-petal" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#eaa6cf"/><stop offset=".55" stop-color="#b9a4f2"/><stop offset="1" stop-color="#8fb0ff"/>
+    </linearGradient>
+    <linearGradient id="g-leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9c4f7" stop-opacity=".92"/><stop offset="1" stop-color="#7d90e2" stop-opacity=".5"/>
+    </linearGradient>
+
+    <!-- photogram look: rough edges, soft halation -->
+    <filter id="f-lumen" x="-25%" y="-25%" width="150%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="7" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="1.1" result="b"/>
+      <feGaussianBlur in="d" stdDeviation="9" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="b"/></feMerge>
+    </filter>
+
+    <!-- RGB channel splits for the glitch hover -->
+    <filter id="rgb1" color-interpolation-filters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/>
+      <feOffset in="r" dx="-6" dy="0" result="ro"/><feOffset in="b" dx="6" dy="1" result="bo"/>
+      <feBlend in="ro" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="bo" mode="screen"/>
+    </filter>
+    <filter id="rgb2" color-interpolation-filters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/>
+      <feOffset in="r" dx="4" dy="-2" result="ro"/><feOffset in="b" dx="-5" dy="0" result="bo"/>
+      <feBlend in="ro" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="bo" mode="screen"/>
+    </filter>
+
+    <!-- moth, wings spread (viewBox 0 0 200 170) -->
+    <g id="a-moth">
+      <g fill="url(#g-lumen)">
+        <path d="M100 74C74 26 26 14 11 38c-6 22 30 48 87 46z"/>
+        <path d="M100 74c26-48 74-60 89-36 6 22-30 48-87 46z"/>
+        <path d="M97 88C58 92 24 112 38 142c20 18 54-18 59-42z"/>
+        <path d="M103 88c39 4 73 24 59 54-20 18-54-18-59-42z"/>
+      </g>
+      <path d="M40 40c20 12 40 26 58 40M160 40c-20 12-40 26-58 40M52 128c14-8 30-22 46-34M148 128c-14-8-30-22-46-34" fill="none" stroke="#24317f" stroke-opacity=".4" stroke-width="2"/>
+      <ellipse cx="100" cy="92" rx="8" ry="30" fill="#fff"/>
+      <path d="M96 62C90 42 80 30 66 24M104 62c6-20 16-32 30-38" fill="none" stroke="#e1eaff" stroke-width="2.4" stroke-linecap="round"/>
+    </g>
+
+    <!-- six-petal bloom (viewBox -100 -100 200 200) -->
+    <path id="a-petal" d="M0 0C-17-26-15-70 0-94C15-70 17-26 0 0z"/>
+    <g id="a-bloom">
+      <g fill="url(#g-petal)" fill-opacity=".72">
+        <use href="#a-petal"/><use href="#a-petal" transform="rotate(60)"/><use href="#a-petal" transform="rotate(120)"/>
+        <use href="#a-petal" transform="rotate(180)"/><use href="#a-petal" transform="rotate(240)"/><use href="#a-petal" transform="rotate(300)"/>
+      </g>
+      <g stroke="#fff" stroke-opacity=".85" stroke-width="1.4" fill="none" stroke-linecap="round">
+        <path d="M0 0L-20-44M0 0L4-50M0 0L24-38M0 0L-34-22M0 0L34-14"/>
+      </g>
+      <g fill="#ffe2b4"><circle cx="-20" cy="-44" r="3.4"/><circle cx="4" cy="-50" r="3.4"/><circle cx="24" cy="-38" r="3.4"/><circle cx="-34" cy="-22" r="3"/><circle cx="34" cy="-14" r="3"/></g>
+      <circle r="6" fill="#fff"/>
+    </g>
+
+    <!-- single leaf (viewBox -30 -80 60 90) -->
+    <path id="a-leafshape" d="M0 0C15-14 17-46 0-74C-17-46-15-14 0 0z"/>
+    <g id="a-leaf">
+      <use href="#a-leafshape" fill="url(#g-leaf)"/>
+      <path d="M0 0V-62" stroke="#fff" stroke-opacity=".5" stroke-width="1.2" fill="none"/>
+    </g>
+
+    <!-- flowering sprig (viewBox 0 0 120 300) -->
+    <g id="a-sprig">
+      <path d="M60 300C58 232 70 172 52 112C44 82 50 42 64 8" fill="none" stroke="#dfe8ff" stroke-opacity=".8" stroke-width="2.4" stroke-linecap="round"/>
+      <g fill="url(#g-leaf)">
+        <use href="#a-leafshape" transform="translate(59 246) rotate(52) scale(.9)"/>
+        <use href="#a-leafshape" transform="translate(62 204) rotate(-56) scale(.85)"/>
+        <use href="#a-leafshape" transform="translate(56 160) rotate(46) scale(.8)"/>
+        <use href="#a-leafshape" transform="translate(50 120) rotate(-50) scale(.7)"/>
+        <use href="#a-leafshape" transform="translate(52 82) rotate(40) scale(.55)"/>
+      </g>
+      <g fill="url(#g-petal)" fill-opacity=".9">
+        <ellipse cx="66" cy="12" rx="9" ry="16" transform="rotate(8 66 12)"/>
+        <ellipse cx="46" cy="34" rx="7" ry="13" transform="rotate(-28 46 34)"/>
+        <ellipse cx="80" cy="40" rx="7" ry="13" transform="rotate(30 80 40)"/>
+      </g>
+    </g>
+  </defs>
+</svg>
+
 <div class="atmosphere" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i></div>
+<div class="botanicals" aria-hidden="true">
+  <svg class="art bg-moths" viewBox="0 0 200 170"><use href="#a-moth"/></svg>
+  <svg class="art bg-moth2" viewBox="0 0 200 170"><use href="#a-moth"/></svg>
+  <svg class="art bg-bloom" viewBox="-100 -100 200 200"><use href="#a-bloom"/></svg>
+  <svg class="art bg-sprig1" viewBox="0 0 120 300"><use href="#a-sprig"/></svg>
+  <svg class="art bg-sprig2" viewBox="0 0 120 300"><use href="#a-sprig"/></svg>
+</div>
 <div class="grain" aria-hidden="true"></div>
 
 <header class="top">
-  <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span><span class="brand-name">Trope</span><span class="brand-tag">build your life to be cohesive</span></span></div>
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 200 170" aria-hidden="true"><use href="#a-moth"/></svg>
+    <span><span class="brand-name">Trope</span><span class="brand-tag">build your life to be cohesive</span></span>
+  </div>
   <nav id="nav" aria-label="Sections">
     <button data-view="collect">Collect</button>
     <button data-view="aesthetics">Aesthetics</button>

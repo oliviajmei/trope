@@ -335,7 +335,10 @@ function askText(title, placeholder = '', value = '') {
   });
 }
 const swatches = (pal, cls = '') => `<div class="swatches ${cls}">${pal.map(c => `<span style="--c:${c.hex};flex:${Math.max(.35, c.w * 6)}" title="${esc(nameColor(c.hex))}"></span>`).join('')}</div>`;
-const header = (eyebrow, title, lead) => `<header class="vhead"><p class="eyebrow">${eyebrow}</p><h1 class="display">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
+const ART_VB = { moth: '0 0 200 170', bloom: '-100 -100 200 200', sprig: '0 0 120 300', leaf: '-30 -80 60 90' };
+const art = (id, cls) => `<svg class="art ${cls}" viewBox="${ART_VB[id]}" aria-hidden="true"><use href="#a-${id}"/></svg>`;
+const header = (eyebrow, title, lead, flower = 'bloom') => `<header class="vhead">${art(flower, 'vh-art')}<p class="eyebrow">${eyebrow}</p><h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
+const emptyMsg = text => `<div class="empty">${art('moth', 'e-moth')}<p>${text}</p></div>`;
 const groupsOf = (p, imgId) => p.groups.filter(g => g.imageIds.includes(imgId));
 const possessive = p => p.name === 'Me' ? 'Your' : `${esc(p.name)}’s`;
 const searchLinks = q => {
@@ -359,8 +362,9 @@ views.collect = () => {
   return `${header('Collect', `Gather what <em style="font-style:normal;color:var(--mauve)">glows</em> for ${p.name === 'Me' ? 'you' : esc(p.name)}.`,
     'Drop in images that feel right — pins, screenshots, photos of things you love. Select a few to sort them into aesthetics.')}
   <div class="drop" id="drop">
-    <p class="big">Drop images here</p>
-    <p class="muted">or paste with Ctrl/⌘ + V</p>
+    ${art('sprig', 'dz-l')}${art('moth', 'dz-r')}
+    <p class="big">Press something here</p>
+    <p class="muted">drop images, or paste with Ctrl/⌘ + V</p>
     <p><button class="primary" data-act="browse">Choose images</button></p>
   </div>
   ${p.images.length ? `<div class="chips filters">
@@ -374,7 +378,7 @@ views.collect = () => {
       <button class="check" data-act="sel" data-id="${i.id}" aria-pressed="${state.sel.has(i.id)}" aria-label="Select image">✓</button>
       <span class="dots">${groupsOf(p, i.id).map(g => `<i style="--c:${g.color}"></i>`).join('')}</span>
     </div>`).join('')}</div>`
-    : `<p class="empty">${p.images.length ? 'Nothing here yet.' : 'Start with five to ten images — the more varied, the better the groups.'}</p>`}
+    : emptyMsg(p.images.length ? 'Nothing pressed here yet.' : 'Start with five to ten images — the more varied, the better the groups.')}
   <div class="smart">
     <p><strong>Smart analysis</strong> — ${state.mlStatus ? esc(state.mlStatus) : state.smart ? 'On. Trope reads subjects and style (botanical, moths, grain…), not just colour. It all runs on your device.' : 'Off. Turn on to match by subject and style, not just colour. Runs on your device with an open model — no AI service. One-time ~100&nbsp;MB download.'}</p>
     <button class="${state.smart ? 'ghost' : 'primary'}" data-act="smart" ${state.mlStatus ? 'disabled' : ''}>${state.smart ? 'Turn off' : 'Turn on'}</button>
@@ -448,7 +452,7 @@ views.match = () => {
   const p = prof(), pr = mineProfile(p), m = state.match;
   const head = header('Match', 'Does it fit?', `Drop in a photo of anything — a bag, a lamp, a dress — and see how well it sits inside ${p.name === 'Me' ? 'your' : esc(p.name) + '’s'} aesthetic.`);
   if (!pr.stats) return `${head}<p class="empty">Build an aesthetic first (Collect), then come back to test items against it.</p>`;
-  if (!m) return `${head}<div class="drop" id="drop"><p class="big">Drop an item to test</p><p class="muted">or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="matchbrowse">Choose an image</button></p></div>`;
+  if (!m) return `${head}<div class="drop" id="drop">${art('sprig', 'dz-l')}${art('moth', 'dz-r')}<p class="big">Show me something</p><p class="muted">drop an item, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="matchbrowse">Choose an image</button></p></div>`;
   const total = matchScore(m, pr);
   const verdict = total >= 80 ? 'Right at home.' : total >= 60 ? 'Close — fits with a little styling.' : total >= 40 ? 'Adjacent — works as an accent piece.' : 'Off-vibe for this aesthetic.';
   const per = p.groups.map(g => ({ g, s: matchScore(m, groupProfile(p, g)) })).filter(x => x.s !== null).sort((a, b) => b.s - a.s);
@@ -547,6 +551,7 @@ views.gifts = () => {
   const cards = scored.map(({ idea, hitT, hitK }) => {
     const why = [hitK.length ? `your “${hitK[0]}” thread` : '', hitT.length ? `a ${list(hitT)} mood` : ''].filter(Boolean);
     return `<article class="card gift fade">
+      ${art('leaf', 'g-art')}
       <div class="cat"><span>${idea[1]}</span><span>${'$'.repeat(idea[2])}</span></div>
       <h3>${idea[0]}</h3>
       <p class="why">${why.length ? `Fits ${list(why)}.` : 'A softer match — an adventurous pick.'}</p>
