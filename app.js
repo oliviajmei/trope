@@ -1,7 +1,7 @@
 'use strict';
 
 /* ============================================================
-   Trope — build your life to be cohesive.
+   Trope: build your life to be cohesive.
    Matching is 100% on-device (colour maths + an optional open
    image model). No AI service is ever called. Data lives in
    IndexedDB; optional sync goes to your own Firebase project.
@@ -213,7 +213,7 @@ const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] 
 const unit = v => { const n = Math.sqrt(dot(v, v)) || 1; return v.map(x => x / n); };
 const round3 = v => v.map(x => Math.round(x * 1000) / 1000);
 
-/* [keyword, text prompt] — keywords double as the vocabulary gift ideas are tagged with. */
+/* [keyword, text prompt]. Keywords double as the vocabulary gift ideas are tagged with. */
 const VOCAB = [
   ['botanical', 'botanical plants'], ['floral', 'flowers'], ['cyanotype', 'cyanotype print'], ['vintage', 'vintage retro'], ['minimal', 'minimalist'],
   ['gothic', 'gothic dark'], ['academia', 'dark academia'], ['cottagecore', 'cottagecore'], ['coquette', 'coquette bows and lace'], ['dreamy', 'dreamy soft glow'],
@@ -271,7 +271,7 @@ async function setSmart(on) {
   state.smart = on; save();
   if (!on) return render();
   try { await ml.load(); await embedMissing(); toast('Smart analysis is on'); }
-  catch { state.smart = false; state.mlStatus = ''; save(); render(); toast('Could not load the on-device model — check your connection'); }
+  catch { state.smart = false; state.mlStatus = ''; save(); render(); toast('Could not load the on-device model. Check your connection.'); }
 }
 
 /* Style keywords the group's images suggest, from CLIP text↔image similarity. */
@@ -360,7 +360,7 @@ views.collect = () => {
   const ungrouped = p.images.filter(i => !groupsOf(p, i.id).length).length;
   const chip = (id, label, count, color) => `<button class="chip" data-act="filter" data-f="${id}" aria-pressed="${state.filter === id}">${color ? `<i class="dot" style="--c:${color}"></i>` : ''}${esc(label)} <span class="muted">${count}</span></button>`;
   return `${header('Collect', `Gather what <em style="font-style:normal;color:var(--mauve)">glows</em> for ${p.name === 'Me' ? 'you' : esc(p.name)}.`,
-    'Drop in images that feel right — pins, screenshots, photos of things you love. Select a few to sort them into aesthetics.')}
+    'Drop in images that feel right: pins, screenshots, photos of things you love. Select a few to sort them into aesthetics.')}
   <div class="drop" id="drop">
     ${art('sprig', 'dz-l')}${art('moth', 'dz-r')}
     <p class="big">Press something here</p>
@@ -378,9 +378,9 @@ views.collect = () => {
       <button class="check" data-act="sel" data-id="${i.id}" aria-pressed="${state.sel.has(i.id)}" aria-label="Select image">✓</button>
       <span class="dots">${groupsOf(p, i.id).map(g => `<i style="--c:${g.color}"></i>`).join('')}</span>
     </div>`).join('')}</div>`
-    : emptyMsg(p.images.length ? 'Nothing pressed here yet.' : 'Start with five to ten images — the more varied, the better the groups.')}
+    : emptyMsg(p.images.length ? 'Nothing pressed here yet.' : 'Start with five to ten images. The more varied they are, the better the groups.')}
   <div class="smart">
-    <p><strong>Smart analysis</strong> — ${state.mlStatus ? esc(state.mlStatus) : state.smart ? 'On. Trope reads subjects and style (botanical, moths, grain…), not just colour. It all runs on your device.' : 'Off. Turn on to match by subject and style, not just colour. Runs on your device with an open model — no AI service. One-time ~100&nbsp;MB download.'}</p>
+    <p><strong>Smart analysis:</strong> ${state.mlStatus ? esc(state.mlStatus) : state.smart ? 'On. Trope reads subjects and style (botanical, moths, grain…), not just colour. It all runs on your device.' : 'Off. Turn on to match by subject and style, not just colour. Runs on your device with an open model and no AI service. One-time ~100&nbsp;MB download.'}</p>
     <button class="${state.smart ? 'ghost' : 'primary'}" data-act="smart" ${state.mlStatus ? 'disabled' : ''}>${state.smart ? 'Turn off' : 'Turn on'}</button>
   </div>
   <p class="note">Pinterest import is on the roadmap. For now: save or screenshot pins, then drop or paste them here.</p>`;
@@ -388,7 +388,7 @@ views.collect = () => {
 
 views.aesthetics = () => {
   const p = prof();
-  return `${header('Aesthetics', 'Not everything fits in one.', 'Group images into separate aesthetics — each gets its own palette and mood. Then choose which ones feed into the blend that becomes “mine”.')}
+  return `${header('Aesthetics', 'Not everything fits in one.', 'Group images into separate aesthetics, each with its own palette and mood. Then choose which ones feed into the blend that becomes “mine”.')}
   <div class="row" style="margin-bottom:1.6rem">
     <button class="primary" data-act="newgroup">New aesthetic</button>
     <button class="ghost" data-act="suggest">Suggest groups from my images</button>
@@ -402,7 +402,7 @@ views.aesthetics = () => {
         ${pr.palette.length ? swatches(pr.palette) : ''}
         <p class="desc">${g.imageIds.length} image${g.imageIds.length === 1 ? '' : 's'}${pr.traits.length ? ' · ' + pr.traits.join(' · ') : ''}</p>
         <div class="chips">${g.keywords.map(k => `<span class="chip">${esc(k)} <button class="x" data-act="rmkw" data-g="${g.id}" data-k="${esc(k)}" aria-label="Remove ${esc(k)}">×</button></span>`).join('')}</div>
-        <input type="text" class="kwadd" placeholder="Add a keyword — botanical, grain, gothic…" data-kw="${g.id}" maxlength="30">
+        <input type="text" class="kwadd" placeholder="Add a keyword: botanical, grain, gothic…" data-kw="${g.id}" maxlength="30">
         ${(tags => tags.length ? `<div class="suggest">Looks like: ${tags.map(k => `<button class="chip add" data-act="addkw" data-g="${g.id}" data-k="${esc(k)}">+ ${esc(k)}</button>`).join('')}</div>` : '')(suggestTags(p, g))}
         <div class="mine-row">
           <label><input type="checkbox" data-change="inmine" data-g="${g.id}" ${g.inMine ? 'checked' : ''}> Include in my aesthetic</label>
@@ -417,7 +417,7 @@ function meter(l, r, v) { return `<div class="meter"><div class="lab"><span>${l}
 
 views.mine = () => {
   const p = prof(), pr = mineProfile(p);
-  if (!pr.stats) return `${header('Mine', `${possessive(p)} aesthetic`, 'Blend your aesthetics into one.')}<p class="empty">Add some images first — then this page turns them into a palette, a mood, and search terms.</p>`;
+  if (!pr.stats) return `${header('Mine', `${possessive(p)} aesthetic`, 'Blend your aesthetics into one.')}<p class="empty">Add some images first. This page then turns them into a palette, a mood, and search terms.</p>`;
   const st = pr.stats, names = pr.palette.slice(0, 3).map(c => nameColor(c.hex));
   const sentence = `${possessive(p)} aesthetic is ${pr.traits.length ? list(pr.traits) : 'balanced'}, built around ${list(names)}.${pr.keywords.length ? ` Recurring threads: ${list(pr.keywords.slice(0, 4))}.` : ''}`;
   const active = p.groups.filter(g => g.inMine && g.weight > 0);
@@ -441,7 +441,7 @@ views.mine = () => {
     </section>
     <section class="card fade">
       <h2 class="sub">Hunt for it</h2>
-      <p class="muted small">Search terms built from your palette and keywords: <b>${esc(q || '—')}</b></p>
+      <p class="muted small">Search terms built from your palette and keywords: <b>${esc(q || 'none yet')}</b></p>
       ${q ? searchLinks(q) : ''}
       <p class="muted small" style="margin-top:1rem">Or <button class="link" data-act="goto" data-v="match">test a specific item</button> · <button class="link" data-act="goto" data-v="gifts">get gift ideas</button></p>
     </section>
@@ -450,11 +450,11 @@ views.mine = () => {
 
 views.match = () => {
   const p = prof(), pr = mineProfile(p), m = state.match;
-  const head = header('Match', 'Does it fit?', `Drop in a photo of anything — a bag, a lamp, a dress — and see how well it sits inside ${p.name === 'Me' ? 'your' : esc(p.name) + '’s'} aesthetic.`);
+  const head = header('Match', 'Does it fit?', `Drop in a photo of anything (a bag, a lamp, a dress) and see how well it sits inside ${p.name === 'Me' ? 'your' : esc(p.name) + '’s'} aesthetic.`);
   if (!pr.stats) return `${head}<p class="empty">Build an aesthetic first (Collect), then come back to test items against it.</p>`;
   if (!m) return `${head}<div class="drop" id="drop">${art('sprig', 'dz-l')}${art('moth', 'dz-r')}<p class="big">Show me something</p><p class="muted">drop an item, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="matchbrowse">Choose an image</button></p></div>`;
   const total = matchScore(m, pr);
-  const verdict = total >= 80 ? 'Right at home.' : total >= 60 ? 'Close — fits with a little styling.' : total >= 40 ? 'Adjacent — works as an accent piece.' : 'Off-vibe for this aesthetic.';
+  const verdict = total >= 80 ? 'Right at home.' : total >= 60 ? 'Close, and it fits with a little styling.' : total >= 40 ? 'Adjacent, and it works as an accent piece.' : 'Off-vibe for this aesthetic.';
   const per = p.groups.map(g => ({ g, s: matchScore(m, groupProfile(p, g)) })).filter(x => x.s !== null).sort((a, b) => b.s - a.s);
   return `${head}
   <div class="match-grid">
@@ -554,11 +554,11 @@ views.gifts = () => {
       ${art('leaf', 'g-art')}
       <div class="cat"><span>${idea[1]}</span><span>${'$'.repeat(idea[2])}</span></div>
       <h3>${idea[0]}</h3>
-      <p class="why">${why.length ? `Fits ${list(why)}.` : 'A softer match — an adventurous pick.'}</p>
+      <p class="why">${why.length ? `Fits ${list(why)}.` : 'A softer match, but an adventurous pick.'}</p>
       ${searchLinks(`${idea[5]} ${color}`.trim())}
     </article>`;
   }).join('');
-  return `${head}${controls}${cards ? `<div class="ggrid">${cards}</div><p style="margin-top:1.6rem"><button class="ghost" data-act="shuffle">Shuffle ideas</button></p>` : '<p class="empty">No ideas match those filters — try another category or budget.</p>'}`;
+  return `${head}${controls}${cards ? `<div class="ggrid">${cards}</div><p style="margin-top:1.6rem"><button class="ghost" data-act="shuffle">Shuffle ideas</button></p>` : '<p class="empty">No ideas match those filters. Try another category or budget.</p>'}`;
 };
 
 /* ---------------- render ---------------- */
@@ -594,7 +594,7 @@ function openImage(id) {
       <div><h2 class="sub">Palette</h2>${swatches(im.palette)}
         <p class="muted small" style="margin:.6rem 0 0">${list(im.palette.slice(0, 4).map(c => nameColor(c.hex)))}${traitsOf(im.stats).length ? ' · ' + traitsOf(im.stats).join(', ') : ''}</p></div>
       <div><h2 class="sub">Aesthetics</h2>
-        ${p.groups.length ? `<div class="chips">${p.groups.map(g => `<button class="chip" data-act="togglegroup" data-g="${g.id}" data-id="${id}" aria-pressed="${g.imageIds.includes(id)}"><i class="dot" style="--c:${g.color}"></i>${esc(g.name)}</button>`).join('')}</div>` : '<p class="muted small">No aesthetics yet — create one on the Aesthetics page.</p>'}</div>
+        ${p.groups.length ? `<div class="chips">${p.groups.map(g => `<button class="chip" data-act="togglegroup" data-g="${g.id}" data-id="${id}" aria-pressed="${g.imageIds.includes(id)}"><i class="dot" style="--c:${g.color}"></i>${esc(g.name)}</button>`).join('')}</div>` : '<p class="muted small">No aesthetics yet. Create one on the Aesthetics page.</p>'}</div>
       <div class="row"><button class="ghost" data-act="matchthis" data-id="${id}">Test against my aesthetic</button><button class="ghost danger" data-act="delimg" data-id="${id}">Delete</button><button class="primary" data-close>Close</button></div>
     </div></div>`;
   if (!d.open) d.showModal();
@@ -603,7 +603,7 @@ function openImage(id) {
 function openProfiles() {
   const d = $('#profileDialog');
   d.innerHTML = `<h2 class="display sm">Whose aesthetic?</h2>
-    <p class="muted small">Keep a separate collection for each person — you, a friend, a gift recipient.</p>
+    <p class="muted small">Keep a separate collection for each person: you, a friend, a gift recipient.</p>
     <div class="plist">${state.profiles.map(p => `<div class="item ${p.id === state.activeId ? 'on' : ''}"><span>${esc(p.name)} <small class="muted">· ${p.images.length} images</small></span>
       ${p.id === state.activeId ? '' : `<button class="ghost" data-act="switchprofile" data-id="${p.id}">Switch</button>`}
       <button class="ghost" data-act="renameprofile" data-id="${p.id}">Rename</button>
@@ -648,7 +648,7 @@ function suggestGroups() {
     createGroup(cap(`${nameColor(pr.palette[0].hex)}${pr.traits[0] ? ' · ' + pr.traits[0] : ''}`), ids, [], pr.palette[0].hex);
     made++;
   }
-  save(); render(); toast(`Suggested ${made} aesthetics — rename them to taste`);
+  save(); render(); toast(`Suggested ${made} aesthetics. Rename them to taste`);
 }
 
 /* ---------------- optional cloud sync (your own Firebase project) ----------------
@@ -668,7 +668,7 @@ const sync = {
     await load(`https://www.gstatic.com/firebasejs/${v}/firebase-firestore-compat.js`);
     firebase.initializeApp(this.cfg); this.db = firebase.firestore(); return true;
   },
-  schedule() { if (this.code && this.cfg) { clearTimeout(this.timer); this.timer = setTimeout(() => this.push().catch(() => toast('Sync failed — will retry on next change')), 2500); } },
+  schedule() { if (this.code && this.cfg) { clearTimeout(this.timer); this.timer = setTimeout(() => this.push().catch(() => toast('Sync failed. It will retry on the next change.')), 2500); } },
   ref() { return this.db.collection('sync').doc(this.code); },
   async push() {
     if (this.busy || !await this.init()) return; this.busy = true;
@@ -709,10 +709,10 @@ const sync = {
   openDialog() {
     const d = $('#syncDialog');
     if (!this.cfg) d.innerHTML = `<h2 class="display sm">Sync devices</h2>
-      <p class="muted">Cloud sync isn’t set up yet. Everything works offline in the meantime. To enable it, add your Firebase config to <b>firebase-config.js</b> — steps are in README.md.</p>
+      <p class="muted">Cloud sync isn’t set up yet. Everything works offline in the meantime. To enable it, add your Firebase config to <b>firebase-config.js</b>. Steps are in README.md.</p>
       <div class="row end"><button class="primary" data-close>Okay</button></div>`;
     else if (this.code) d.innerHTML = `<h2 class="display sm">Sync is on</h2>
-      <p class="muted">Enter this code on another device to share your collection. Anyone with the code can see your images — keep it private.</p>
+      <p class="muted">Enter this code on another device to share your collection. Anyone with the code can see your images, so keep it private.</p>
       <p class="code">${esc(this.code)}</p>
       <div class="row end"><button class="ghost danger" data-act="syncoff">Turn off here</button><button class="primary" data-close>Close</button></div>`;
     else d.innerHTML = `<h2 class="display sm">Sync devices</h2>

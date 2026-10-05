@@ -1,10 +1,33 @@
 {
-  "firestore": { "rules": "firestore.rules" },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "hosting": {
     "public": ".",
     "ignore": [
-      "firebase.json", "firestore.rules", "README.md", ".firebaserc", ".gitignore",
-      ".git", ".git/**", ".firebase", ".firebase/**", "**/.*", "**/node_modules/**", "_*"
+      "firebase.json",
+      "firestore.rules",
+      "README.md",
+      ".firebaserc",
+      ".gitignore",
+      ".git",
+      ".git/**",
+      ".firebase",
+      ".firebase/**",
+      "**/.*",
+      "**/node_modules/**",
+      "_*"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(html|js|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
     ]
   }
 }

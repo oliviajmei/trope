@@ -1,4 +1,4 @@
-# Trope — build your life to be cohesive
+# Trope: build your life to be cohesive
 
 A static web app (no build step). Open `index.html`, or serve the folder.
 
