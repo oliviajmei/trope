@@ -338,7 +338,7 @@ const swatches = (pal, cls = '') => `<div class="swatches ${cls}">${pal.map(c =>
 const hashStr = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
 const art = (id, cls, rot) => `<img class="art ${cls}" src="assets/${id}.webp" alt="" aria-hidden="true" decoding="async" style="--r:${rot != null ? rot : (hashStr(id + '|' + cls) % 61) - 30}deg">`;
 const GIFT_ART = ['pink', 'teal', 'butterfly', 'mallow', 'bluebloom', 'moth'];
-const header = (eyebrow, title, lead, flower = 'bluebloom') => `<header class="vhead">${art(flower, 'vh-art')}<h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
+const header = (eyebrow, title, lead, flower = 'bluebloom') => `<header class="vhead">${art(flower, 'vh-art')}<h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1><img class="flourish" src="assets/band.webp" alt="" aria-hidden="true" decoding="async">${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
 const emptyMsg = (text, img = 'moth') => `<div class="empty">${art(img, 'e-moth')}<p>${text}</p></div>`;
 const groupsOf = (p, imgId) => p.groups.filter(g => g.imageIds.includes(imgId));
 const possessive = p => p.name === 'Me' ? 'Your' : `${esc(p.name)}’s`;

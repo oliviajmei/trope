@@ -147,10 +147,10 @@ input[type="checkbox"] { accent-color: var(--rose); width: 1rem; height: 1rem; }
 /* ---------- plates: herbarium cards with taped corners ---------- */
 .mine-grid, .agrid, .ggrid, .match-grid { counter-reset: plate; }
 .card { position: relative; counter-increment: plate; padding: 1.5rem 1.4rem 1.7rem; border: 1px solid var(--line); border-radius: 2px;
-  background: linear-gradient(165deg, rgba(22, 48, 58, .84), rgba(11, 25, 31, .9));
+  background: url("assets/scroll.webp") no-repeat right -8px top -8px / 54px auto, url("assets/scroll-r.webp") no-repeat left -8px bottom -8px / 54px auto, linear-gradient(165deg, rgba(22, 48, 58, .84), rgba(11, 25, 31, .9));
   box-shadow: 0 0 0 4px rgba(9, 21, 25, .7), 0 0 0 5px rgba(152, 167, 169, .16), 0 18px 40px rgba(0, 0, 0, .35); transition: transform .3s; }
-.card::before { content: ""; position: absolute; top: -11px; left: 18%; width: 86px; height: 22px; transform: rotate(-4deg); background: rgba(234, 223, 199, .2); border: 1px solid rgba(255, 255, 255, .1); }
-.card:nth-child(even)::before { left: auto; right: 14%; transform: rotate(3deg); }
+.card::before { content: ""; position: absolute; top: -11px; left: 12%; width: 86px; height: 22px; transform: rotate(-4deg); background: rgba(234, 223, 199, .2); border: 1px solid rgba(255, 255, 255, .1); }
+.card:nth-child(even)::before { left: 50%; transform: rotate(3deg); }
 .card::after { content: "no. " counter(plate, decimal-leading-zero); position: absolute; right: 14px; bottom: 7px; font-size: .68rem; letter-spacing: .22em; color: var(--muted); opacity: .75; }
 .card:nth-child(3n+1) { transform: rotate(-.4deg); }
 .card:nth-child(3n+2) { transform: rotate(.35deg); }
@@ -269,7 +269,7 @@ input[type="checkbox"] { accent-color: var(--rose); width: 1rem; height: 1rem; }
 
 /* ---------- dialogs ---------- */
 .dlg { border: 1px solid var(--lilac); border-radius: 2px; padding: 1.6rem; width: min(520px, calc(100vw - 24px)); color: var(--text); text-transform: lowercase;
-  background: rgba(10, 22, 28, .96); box-shadow: 5px 5px 0 rgba(215, 139, 180, .35), -4px -4px 0 rgba(127, 208, 212, .25), 0 30px 100px rgba(0, 0, 0, .6); }
+  background: url("assets/scroll.webp") no-repeat right -8px top -8px / 64px auto, url("assets/scroll-r.webp") no-repeat left -8px bottom -8px / 64px auto, rgba(10, 22, 28, .96); box-shadow: 5px 5px 0 rgba(215, 139, 180, .35), -4px -4px 0 rgba(127, 208, 212, .25), 0 30px 100px rgba(0, 0, 0, .6); }
 .dlg.wide { width: min(860px, calc(100vw - 24px)); }
 .dlg.small form { display: grid; gap: 1rem; }
 .dlg::backdrop { background: rgba(3, 9, 11, .78); }
@@ -289,3 +289,13 @@ input[type="checkbox"] { accent-color: var(--rose); width: 1rem; height: 1rem; }
 
 /* text set in the script font is properly capitalized */
 .display, .glitch, h2.sub, .brand-name, .drop .big, .name-input { text-transform: none; }
+
+/* ---------- ornaments from the line drawings ---------- */
+.flourish { display: block; height: 58px; width: auto; max-width: 70%; margin: .8rem 0 0 -4px; opacity: .8; filter: drop-shadow(0 0 10px rgba(127, 208, 212, .16)); }
+.drop::before, .drop::after { content: ""; position: absolute; left: 50%; width: min(380px, 62%); height: 62px; transform: translateX(-50%); background: url("assets/band.webp") center / contain no-repeat; opacity: .55; pointer-events: none; }
+.drop::before { top: 6px; }
+.drop::after { bottom: 6px; transform: translateX(-50%) scaleY(-1); }
+.foot::before { content: ""; flex: 0 0 100%; height: 70px; margin-bottom: .6rem; background: url("assets/band.webp") center / contain no-repeat; opacity: .5; }
+.bg-ivy { height: 82vh; left: -1vw; bottom: -8vh; opacity: .3; transform-origin: 50% 100%; animation: sway 30s ease-in-out infinite alternate; }
+.bg-sprigline { height: 72vh; right: 1vw; top: 14vh; opacity: .26; animation: sway 26s ease-in-out infinite alternate-reverse; }
+@media (max-width: 760px) { .flourish { height: 44px; } .bg-ivy, .bg-sprigline { opacity: .18; } }
