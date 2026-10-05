@@ -1,7 +1,7 @@
 'use strict';
 
 /* ============================================================
-   Troupe — build your life to be cohesive.
+   Trope — build your life to be cohesive.
    Matching is 100% on-device (colour maths + an optional open
    image model). No AI service is ever called. Data lives in
    IndexedDB; optional sync goes to your own Firebase project.
@@ -24,7 +24,7 @@ const store = {
   async open() {
     try {
       await new Promise((res, rej) => {
-        const r = indexedDB.open('troupe', 1);
+        const r = indexedDB.open('trope', 1);
         r.onupgradeneeded = () => r.result.createObjectStore('kv');
         r.onsuccess = () => { this.db = r.result; res(); };
         r.onerror = () => rej(r.error);
@@ -376,7 +376,7 @@ views.collect = () => {
     </div>`).join('')}</div>`
     : `<p class="empty">${p.images.length ? 'Nothing here yet.' : 'Start with five to ten images — the more varied, the better the groups.'}</p>`}
   <div class="smart">
-    <p><strong>Smart analysis</strong> — ${state.mlStatus ? esc(state.mlStatus) : state.smart ? 'On. Troupe reads subjects and style (botanical, moths, grain…), not just colour. It all runs on your device.' : 'Off. Turn on to match by subject and style, not just colour. Runs on your device with an open model — no AI service. One-time ~100&nbsp;MB download.'}</p>
+    <p><strong>Smart analysis</strong> — ${state.mlStatus ? esc(state.mlStatus) : state.smart ? 'On. Trope reads subjects and style (botanical, moths, grain…), not just colour. It all runs on your device.' : 'Off. Turn on to match by subject and style, not just colour. Runs on your device with an open model — no AI service. One-time ~100&nbsp;MB download.'}</p>
     <button class="${state.smart ? 'ghost' : 'primary'}" data-act="smart" ${state.mlStatus ? 'disabled' : ''}>${state.smart ? 'Turn off' : 'Turn on'}</button>
   </div>
   <p class="note">Pinterest import is on the roadmap. For now: save or screenshot pins, then drop or paste them here.</p>`;
@@ -651,9 +651,9 @@ function suggestGroups() {
    document nears Firestore's 1 MB limit. Access is by a long secret code. */
 const sync = {
   db: null, remote: new Set(), timer: null, busy: false,
-  get cfg() { return window.TROUPE_FIREBASE; },
-  get code() { try { return localStorage.getItem('troupe-sync') || ''; } catch { return ''; } },
-  set code(v) { try { v ? localStorage.setItem('troupe-sync', v) : localStorage.removeItem('troupe-sync'); } catch { /* ignore */ } },
+  get cfg() { return window.TROPE_FIREBASE; },
+  get code() { try { return localStorage.getItem('trope-sync') || ''; } catch { return ''; } },
+  set code(v) { try { v ? localStorage.setItem('trope-sync', v) : localStorage.removeItem('trope-sync'); } catch { /* ignore */ } },
   newCode() { const a = new Uint8Array(12); crypto.getRandomValues(a); const h = [...a].map(b => b.toString(16).padStart(2, '0')).join(''); return h.match(/.{6}/g).join('-'); },
   async init() {
     if (this.db || !this.cfg) return !!this.db;
@@ -791,7 +791,7 @@ const actions = {
   },
   export() {
     const blob = new Blob([JSON.stringify({ profiles: state.profiles, activeId: state.activeId })], { type: 'application/json' });
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'troupe-backup.json' }); a.click(); URL.revokeObjectURL(a.href);
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'trope-backup.json' }); a.click(); URL.revokeObjectURL(a.href);
   },
   import() { $('#importInput').click(); }
 };
@@ -836,7 +836,7 @@ $('#importInput').addEventListener('change', async e => {
     if (!confirm('Replace everything in this browser with the backup?')) return;
     state.profiles = data.profiles; state.activeId = data.activeId && data.profiles.some(p => p.id === data.activeId) ? data.activeId : data.profiles[0].id;
     save(); render(); toast('Backup restored');
-  } catch { toast('That file is not a Troupe backup'); }
+  } catch { toast('That file is not a Trope backup'); }
 });
 
 /* drag-and-drop & paste work anywhere on the page */

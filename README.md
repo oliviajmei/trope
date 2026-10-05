@@ -1,4 +1,4 @@
-# Troupe — build your life to be cohesive
+# Trope — build your life to be cohesive
 
 A static web app (no build step). Open `index.html`, or serve the folder.
 
@@ -16,7 +16,7 @@ Sync keeps the same collection on every device, in *your own* Firebase project (
 
 1. Firebase console → create a project → add a Web app → copy its config.
 2. Firestore Database → create (production mode).
-3. Paste the config into `firebase-config.js` (`window.TROUPE_FIREBASE = {…}`).
+3. Paste the config into `firebase-config.js` (`window.TROPE_FIREBASE = {…}`).
 4. Deploy rules + hosting: `npx firebase-tools deploy` (set the project with `firebase use <id>` first).
 5. In the app: footer → **Sync devices** → **Create a code**, then enter that code on your other devices.
 

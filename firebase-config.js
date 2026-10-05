@@ -1,6 +1,6 @@
 // Firebase web config for the "trope" project (these values are public by design;
 // access is controlled by firestore.rules). Set to null to run fully offline.
-window.TROUPE_FIREBASE = {
+window.TROPE_FIREBASE = {
   apiKey: "AIzaSyCa1DoCpmsRKcQgyw2x8BDBRLWiNx3q9LQ",
   authDomain: "tropeaesthetics.firebaseapp.com",
   projectId: "tropeaesthetics",
