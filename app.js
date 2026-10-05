@@ -335,9 +335,8 @@ function askText(title, placeholder = '', value = '') {
   });
 }
 const swatches = (pal, cls = '') => `<div class="swatches ${cls}">${pal.map(c => `<span style="--c:${c.hex};flex:${Math.max(.35, c.w * 6)}" title="${esc(nameColor(c.hex))}"></span>`).join('')}</div>`;
-const ART_VB = { moth: '0 0 200 170', bloom: '-100 -100 200 200', sprig: '0 0 120 300', leaf: '-30 -80 60 90' };
-const art = (id, cls) => `<svg class="art ${cls}" viewBox="${ART_VB[id]}" aria-hidden="true"><use href="#a-${id}"/></svg>`;
-const header = (eyebrow, title, lead, flower = 'bloom') => `<header class="vhead">${art(flower, 'vh-art')}<p class="eyebrow">${eyebrow}</p><h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
+const art = (id, cls) => `<img class="art ${cls}" src="assets/${id}.webp" alt="" aria-hidden="true" decoding="async">`;
+const header = (eyebrow, title, lead, flower = 'pink') => `<header class="vhead">${art(flower, 'vh-art')}<p class="eyebrow">${eyebrow}</p><h1 class="display glitch" data-text="${esc(title.replace(/<[^>]+>/g, ''))}">${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</header>`;
 const emptyMsg = text => `<div class="empty">${art('moth', 'e-moth')}<p>${text}</p></div>`;
 const groupsOf = (p, imgId) => p.groups.filter(g => g.imageIds.includes(imgId));
 const possessive = p => p.name === 'Me' ? 'Your' : `${esc(p.name)}’s`;
@@ -359,10 +358,10 @@ views.collect = () => {
     : (p.groups.find(g => g.id === state.filter) ? imagesOf(p, p.groups.find(g => g.id === state.filter)) : p.images);
   const ungrouped = p.images.filter(i => !groupsOf(p, i.id).length).length;
   const chip = (id, label, count, color) => `<button class="chip" data-act="filter" data-f="${id}" aria-pressed="${state.filter === id}">${color ? `<i class="dot" style="--c:${color}"></i>` : ''}${esc(label)} <span class="muted">${count}</span></button>`;
-  return `${header('Collect', `Gather what <em style="font-style:normal;color:var(--mauve)">glows</em> for ${p.name === 'Me' ? 'you' : esc(p.name)}.`,
+  return `${header('Collect', `Collect ${p.name === 'Me' ? 'your' : esc(p.name) + '’s'} trope`,
     'Drop in images that feel right: pins, screenshots, photos of things you love. Select a few to sort them into aesthetics.')}
   <div class="drop" id="drop">
-    ${art('sprig', 'dz-l')}${art('moth', 'dz-r')}
+    ${art('mallow', 'dz-l')}${art('moth', 'dz-r')}
     <p class="big">Press something here</p>
     <p class="muted">drop images, or paste with Ctrl/⌘ + V</p>
     <p><button class="primary" data-act="browse">Choose images</button></p>
@@ -388,7 +387,7 @@ views.collect = () => {
 
 views.aesthetics = () => {
   const p = prof();
-  return `${header('Aesthetics', 'Not everything fits in one.', 'Group images into separate aesthetics, each with its own palette and mood. Then choose which ones feed into the blend that becomes “mine”.')}
+  return `${header('Aesthetics', 'Not everything fits in one.', 'Group images into separate aesthetics, each with its own palette and mood. Then choose which ones feed into the blend that becomes “mine”.', 'mallow')}
   <div class="row" style="margin-bottom:1.6rem">
     <button class="primary" data-act="newgroup">New aesthetic</button>
     <button class="ghost" data-act="suggest">Suggest groups from my images</button>
@@ -417,13 +416,13 @@ function meter(l, r, v) { return `<div class="meter"><div class="lab"><span>${l}
 
 views.mine = () => {
   const p = prof(), pr = mineProfile(p);
-  if (!pr.stats) return `${header('Mine', `${possessive(p)} aesthetic`, 'Blend your aesthetics into one.')}<p class="empty">Add some images first. This page then turns them into a palette, a mood, and search terms.</p>`;
+  if (!pr.stats) return `${header('Mine', `${possessive(p)} aesthetic`, 'Blend your aesthetics into one.', 'moth')}<p class="empty">Add some images first. This page then turns them into a palette, a mood, and search terms.</p>`;
   const st = pr.stats, names = pr.palette.slice(0, 3).map(c => nameColor(c.hex));
   const sentence = `${possessive(p)} aesthetic is ${pr.traits.length ? list(pr.traits) : 'balanced'}, built around ${list(names)}.${pr.keywords.length ? ` Recurring threads: ${list(pr.keywords.slice(0, 4))}.` : ''}`;
   const active = p.groups.filter(g => g.inMine && g.weight > 0);
   const tw = active.reduce((a, g) => a + g.weight, 0) || 1;
   const q = [...pr.keywords.slice(0, 2), ...names.slice(0, 2)].join(' ');
-  return `${header('Mine', `${possessive(p)} aesthetic`, 'Blended from the aesthetics you included. Adjust the mix on the Aesthetics page.')}
+  return `${header('Mine', `${possessive(p)} aesthetic`, 'Blended from the aesthetics you included. Adjust the mix on the Aesthetics page.', 'moth')}
   <div class="mine-grid">
     <section class="card fade">
       <p class="statement">${esc(sentence)}</p>
@@ -450,9 +449,9 @@ views.mine = () => {
 
 views.match = () => {
   const p = prof(), pr = mineProfile(p), m = state.match;
-  const head = header('Match', 'Does it fit?', `Drop in a photo of anything (a bag, a lamp, a dress) and see how well it sits inside ${p.name === 'Me' ? 'your' : esc(p.name) + '’s'} aesthetic.`);
+  const head = header('Match', 'Does it fit?', `Drop in a photo of anything (a bag, a lamp, a dress) and see how well it sits inside ${p.name === 'Me' ? 'your' : esc(p.name) + '’s'} aesthetic.`, 'insect');
   if (!pr.stats) return `${head}<p class="empty">Build an aesthetic first (Collect), then come back to test items against it.</p>`;
-  if (!m) return `${head}<div class="drop" id="drop">${art('sprig', 'dz-l')}${art('moth', 'dz-r')}<p class="big">Show me something</p><p class="muted">drop an item, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="matchbrowse">Choose an image</button></p></div>`;
+  if (!m) return `${head}<div class="drop" id="drop">${art('mallow', 'dz-l')}${art('moth', 'dz-r')}<p class="big">Show me something</p><p class="muted">drop an item, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="matchbrowse">Choose an image</button></p></div>`;
   const total = matchScore(m, pr);
   const verdict = total >= 80 ? 'Right at home.' : total >= 60 ? 'Close, and it fits with a little styling.' : total >= 40 ? 'Adjacent, and it works as an accent piece.' : 'Off-vibe for this aesthetic.';
   const per = p.groups.map(g => ({ g, s: matchScore(m, groupProfile(p, g)) })).filter(x => x.s !== null).sort((a, b) => b.s - a.s);
@@ -520,7 +519,7 @@ views.gifts = () => {
   const p = prof(), g = state.gift;
   const src = g.source === 'mine' ? null : p.groups.find(x => x.id === g.source);
   const pr = src ? groupProfile(p, src) : mineProfile(p);
-  const head = header('Gifts', 'Niche, on-theme ideas.', `Ideas matched to an aesthetic. To shop for someone else, add them as a person (top right) and build their aesthetic from images they love.`);
+  const head = header('Gifts', 'Niche, on-theme ideas.', `Ideas matched to an aesthetic. To shop for someone else, add them as a person (top right) and build their aesthetic from images they love.`, 'swallows');
   const controls = `<div class="controls">
     <div class="ctl"><span>Aesthetic</span><select data-change="gsource" aria-label="Aesthetic source">
       <option value="mine" ${g.source === 'mine' ? 'selected' : ''}>${possessive(p)} blended aesthetic</option>
@@ -551,7 +550,7 @@ views.gifts = () => {
   const cards = scored.map(({ idea, hitT, hitK }) => {
     const why = [hitK.length ? `your “${hitK[0]}” thread` : '', hitT.length ? `a ${list(hitT)} mood` : ''].filter(Boolean);
     return `<article class="card gift fade">
-      ${art('leaf', 'g-art')}
+      ${art('pink', 'g-art')}
       <div class="cat"><span>${idea[1]}</span><span>${'$'.repeat(idea[2])}</span></div>
       <h3>${idea[0]}</h3>
       <p class="why">${why.length ? `Fits ${list(why)}.` : 'A softer match, but an adventurous pick.'}</p>

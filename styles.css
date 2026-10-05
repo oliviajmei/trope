@@ -49,15 +49,15 @@ a { color: var(--ice); }
 @keyframes drift { to { transform: translate3d(5vw, -4vh, 0) scale(1.1); } }
 
 .botanicals { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.art { display: block; overflow: visible; filter: url(#f-lumen); }
-.botanicals .art { position: absolute; mix-blend-mode: screen; opacity: .5; will-change: transform; }
-.bg-moths { width: min(34vw, 420px); right: 3vw; top: 12vh; animation: flutter 9s ease-in-out infinite alternate; }
-.bg-moth2 { width: min(22vw, 270px); left: 5vw; bottom: 8vh; opacity: .34 !important; animation: flutter2 11s ease-in-out infinite alternate; }
-.bg-bloom { width: min(40vw, 520px); left: -9vw; top: 24vh; opacity: .3 !important; animation: sway 24s ease-in-out infinite alternate; }
-.bg-sprig1 { height: 70vh; right: -2vw; bottom: -8vh; opacity: .3 !important; transform-origin: 50% 100%; animation: sway 18s ease-in-out infinite alternate; }
-.bg-sprig2 { height: 52vh; left: 14vw; bottom: -10vh; opacity: .22 !important; transform-origin: 50% 100%; animation: sway 22s ease-in-out infinite alternate-reverse; }
-@keyframes flutter { from { transform: rotate(12deg) translateY(0) scale(1); } to { transform: rotate(17deg) translateY(-14px) scale(1.04); } }
-@keyframes flutter2 { from { transform: rotate(-26deg) translateY(0); } to { transform: rotate(-20deg) translateY(-12px) scale(1.05); } }
+.art { display: block; height: auto; max-width: none; user-select: none; pointer-events: none; filter: drop-shadow(0 0 26px rgba(127, 208, 212, .22)); }
+.botanicals .art { position: absolute; will-change: transform; }
+.bg-swallows { width: min(30vw, 380px); right: 5vw; top: 9vh; opacity: .55; animation: glide 14s ease-in-out infinite alternate; }
+.bg-mallow { width: min(40vw, 540px); left: -9vw; top: 34vh; opacity: .22; animation: sway 26s ease-in-out infinite alternate; }
+.bg-pink { width: min(28vw, 360px); right: -5vw; bottom: -4vh; opacity: .34; animation: sway 22s ease-in-out infinite alternate-reverse; }
+.bg-moth { width: min(26vw, 330px); left: 5vw; bottom: 5vh; opacity: .3; animation: flutter 11s ease-in-out infinite alternate; }
+.bg-insect { width: min(26vw, 330px); left: 40vw; top: 3vh; opacity: .16; animation: glide 18s ease-in-out infinite alternate-reverse; }
+@keyframes flutter { from { transform: rotate(-4deg) translateY(0); } to { transform: rotate(3deg) translateY(-14px); } }
+@keyframes glide { from { transform: translate(0, 0) rotate(-2deg); } to { transform: translate(-14px, 12px) rotate(2deg); } }
 @keyframes sway { from { rotate: -3deg; } to { rotate: 3deg; } }
 
 /* film grain, scanlines, and an occasional signal tear */
@@ -81,7 +81,6 @@ strong, b { font-weight: 400; color: var(--ice); }
 h2.sub { margin: 0 0 .7rem; font-family: var(--script); font-size: 2.1rem; font-weight: 400; line-height: 1.1; color: var(--ice);
   text-shadow: -1px 0 rgba(127, 208, 212, .45), 1px 0 rgba(215, 139, 180, .4); }
 h3 { font-weight: 400; }
-h1, h2, h3, .sub, .eyebrow, .lead, .brand-tag, .brand-name { text-transform: lowercase; }
 .lead { max-width: 52ch; margin: 1.1rem 0 0; color: var(--muted); font-size: 1.05rem; }
 .muted { color: var(--muted); }
 .small { font-size: .85rem; }
@@ -112,7 +111,7 @@ main { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; paddin
 .vhead { position: relative; margin-bottom: 2.6rem; min-height: 150px; }
 .vhead > *:not(.vh-art) { position: relative; z-index: 1; }
 .vhead > .glitch { position: relative; }
-.vh-art { position: absolute; right: 0; top: -22px; width: clamp(150px, 26vw, 300px); opacity: .8; animation: sway 16s ease-in-out infinite alternate; }
+.vh-art { position: absolute; right: 0; top: -18px; width: clamp(130px, 22vw, 260px); opacity: .92; animation: sway 18s ease-in-out infinite alternate; }
 .foot { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px) 100px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .6rem; color: var(--muted); font-size: .85rem; }
 .foot p { margin: 0; }
 
@@ -160,10 +159,10 @@ input[type="checkbox"] { accent-color: var(--rose); width: 1rem; height: 1rem; }
 .drop.over { border-color: var(--rose); background: rgba(40, 90, 105, .45); }
 .drop p { margin: 0; position: relative; z-index: 1; }
 .drop .big { font-family: var(--script); font-size: clamp(2.4rem, 6vw, 3.6rem); line-height: 1.1; text-shadow: -1.5px 0 rgba(127, 208, 212, .55), 1.5px 0 rgba(215, 139, 180, .5); }
-.dz-l { position: absolute; left: 2%; bottom: -14px; height: 118%; opacity: .55; transform-origin: 50% 100%; animation: sway 14s ease-in-out infinite alternate; }
-.dz-r { position: absolute; right: 3%; top: 8%; width: min(190px, 24%); opacity: .75; animation: flutter 8s ease-in-out infinite alternate; }
+.dz-l { position: absolute; left: 3%; top: 50%; width: min(170px, 22%); margin-top: -70px; opacity: .8; animation: sway 14s ease-in-out infinite alternate; }
+.dz-r { position: absolute; right: 3%; top: 14%; width: min(230px, 26%); opacity: .85; animation: flutter 8s ease-in-out infinite alternate; }
 .empty { text-align: center; color: var(--muted); padding: 2.4rem 1rem; }
-.e-moth { width: 90px; margin: 0 auto 1rem; opacity: .8; }
+.e-moth { width: 140px; margin: 0 auto 1rem; opacity: .85; }
 
 /* ---------- collect: deckle-edged prints ---------- */
 .filters { margin-bottom: 1.6rem; }
@@ -258,7 +257,7 @@ input[type="checkbox"] { accent-color: var(--rose); width: 1rem; height: 1rem; }
 .gift .cat { font-size: .74rem; letter-spacing: .2em; color: var(--rose); display: flex; justify-content: space-between; }
 .gift .why { margin: 0 0 .6rem; color: var(--muted); font-size: .9rem; flex: 1; }
 .gift .links a { font-size: .8rem; padding: .22rem .65rem; }
-.g-art { position: absolute; top: 30px; right: 12px; width: 34px; opacity: .85; }
+.g-art { position: absolute; top: 24px; right: 14px; width: 46px; opacity: .9; }
 
 /* ---------- smart analysis / sync ---------- */
 .smart { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.2rem; margin-top: 2rem; padding: 1rem 1.2rem; border: 1px dashed var(--line); background: rgba(10, 24, 30, .5); }
@@ -284,3 +283,6 @@ input[type="checkbox"] { accent-color: var(--rose); width: 1rem; height: 1rem; }
 .toast { position: fixed; z-index: 70; left: 50%; top: 84px; transform: translate(-50%, -12px); opacity: 0; pointer-events: none; padding: .55rem 1.1rem; border-radius: 2px;
   background: rgba(10, 22, 28, .96); border: 1px solid var(--lilac); box-shadow: 3px 3px 0 var(--mag), -2px -2px 0 var(--cyan); transition: .35s; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* text set in the script font is properly capitalized */
+.display, .glitch, h2.sub, .brand-name, .drop .big, .name-input { text-transform: none; }
