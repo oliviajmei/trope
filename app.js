@@ -644,7 +644,7 @@ function segmentItem(c) {
   const med = a => a.sort((p, q) => p - q)[a.length >> 1], bg = [med(R), med(G), med(B)];
   const raw0 = new Uint8Array(N);
   for (let p = 0; p < N; p++) { const i = p * 4; raw0[p] = Math.hypot(d[i] - bg[0], d[i + 1] - bg[1], d[i + 2] - bg[2]) / 255 > .1 ? 1 : 0; }
-  const cr = Math.max(2, Math.round(Math.min(W, H) * .045)), raw = boxMorph(boxMorph(raw0, W, H, cr, false), W, H, cr, true);
+  const cr = Math.max(2, Math.round(Math.min(W, H) * .022)), raw = boxMorph(boxMorph(raw0, W, H, cr, false), W, H, cr, true);
   const lab = new Int32Array(N), q = new Int32Array(N); let best = 0, bestN = 0, nl = 0;
   for (let s = 0; s < N; s++) if (raw[s] && !lab[s]) {
     nl++; let h0 = 0, t0 = 0; q[t0++] = s; lab[s] = nl;
@@ -685,7 +685,17 @@ function silhouetteOf(seg) {
   if (taper > 1.3) tags.push('a-line'); else if (taper < .75) tags.push('tapered');
   if (waist / Math.max(Math.min(shoulder, hem), .01) < .75) tags.push('cinched waist');
   if (fill > .78 && aspect < 1.15) tags.push('boxy');
-  return { tags: tags.slice(0, 3), aspect, taper, fill, ok: true };
+  // two separate legs near the bottom mean trousers, however wide they flare
+  let legRows = 0;
+  for (const fr of [.7, .76, .82, .88, .94]) {
+    const y = Math.min(y1, y0 + Math.floor(fr * bh)); let first = -1, last = -1;
+    for (let x = x0; x <= x1; x++) if (mask[y * W + x]) { if (first < 0) first = x; last = x; }
+    if (first < 0) continue; let gap = 0, widest = 0, wEnd = 0;
+    for (let x = first; x <= last; x++) { if (!mask[y * W + x]) { gap++; if (gap > widest) { widest = gap; wEnd = x; } } else gap = 0; }
+    const mid = ((wEnd - widest / 2) - x0) / bw;
+    if (widest > .035 * bw && mid > .33 && mid < .67) legRows++;
+  }
+  return { tags: tags.slice(0, 3), aspect, taper, fill, ok: true, legs: legRows >= 2 };
 }
 
 /* Pattern from edge orientation and repetition, compared against a short list of known patterns. */
@@ -702,12 +712,13 @@ function patternOf(c, seg, palette) {
   const rp = prof(y1 - y0 + 1, (i, add) => { const y = y0 + i; for (let x = x0; x <= x1; x++) if (inner[y * W + x]) add(gray[y * W + x]); });
   const cp = prof(x1 - x0 + 1, (i, add) => { const x = x0 + i; for (let y = y0; y <= y1; y++) if (inner[y * W + x]) add(gray[y * W + x]); });
   const periodic = a => {
-    if (a.length < 24) return false; const m = a.reduce((s, v) => s + v, 0) / a.length, z = a.map(v => v - m), v0 = z.reduce((s, v) => s + v * v, 0) / a.length;
+    if (a.length < 24) return false; const n2 = a.length, mx = (n2 - 1) / 2, my = a.reduce((s, v) => s + v, 0) / n2; let sxy = 0, sxx = 0; a.forEach((v, i) => { sxy += (i - mx) * (v - my); sxx += (i - mx) ** 2; });
+    const sl = sxy / (sxx || 1), z = a.map((v, i) => v - my - sl * (i - mx)), v0 = z.reduce((s, v) => s + v * v, 0) / n2;
     if (Math.sqrt(v0) < 6) return false; let best = 0;
     for (let l = 3; l < a.length / 3; l++) { let s = 0; for (let i = 0; i + l < a.length; i++) s += z[i] * z[i + l]; const rr = s / (a.length - l) / v0; if (rr > best) best = rr; }
     return best > .5;
   };
-  const hs = periodic(rp), vs = periodic(cp), energy = (Eh + Ev) / n / 255, multi = palette.filter(p => p.w > .1).length >= 4;
+  const energy = (Eh + Ev) / n / 255, hs = energy >= .03 && periodic(rp), vs = energy >= .03 && periodic(cp), multi = palette.filter(p => p.w > .1).length >= 4;
   let name = 'solid';
   if (hs && vs) name = 'plaid'; else if (hs || vs) name = 'striped'; else if (energy < .03 && palette[0].w > .45) name = 'solid'; else if (multi) name = 'print'; else if (energy > .06) name = 'textured';
   return { name, energy, hs, vs };
@@ -719,44 +730,121 @@ async function zeroShot(emb, list, n, key) {
   return list.map((x, i) => [x[0], ex[i] / sum]).sort((a, b) => b[1] - a[1]).slice(0, n);
 }
 
+/* Every guess below can be overridden by hand, so the full option lists live here. */
+const MASTER = {
+  type: ['dress', 'maxi dress', 'mini dress', 'skirt', 'midi skirt', 'mini skirt', 'maxi skirt', 'pants', 'wide-leg pants', 'straight pants', 'jeans', 'trousers', 'cargo pants', 'shorts',
+    'top', 'blouse', 't-shirt', 'tank top', 'crop top', 'corset top', 'cardigan', 'sweater', 'hoodie', 'jacket', 'coat', 'blazer', 'vest', 'jumpsuit', 'swimsuit', 'shoes', 'boots', 'sandals', 'bag', 'scarf', 'hat', 'jewelry'],
+  sil: ['fitted', 'oversized', 'a-line', 'flowy', 'cropped', 'long', 'mini', 'midi', 'maxi', 'wide-leg', 'straight-leg', 'skinny', 'flared', 'bootcut', 'high-waisted', 'low-rise', 'cinched waist', 'boxy', 'pencil', 'wrap',
+    'halter', 'strapless', 'off-shoulder', 'long sleeve', 'short sleeve', 'sleeveless'],
+  det: FABRICS.map(x => x[0]),
+  pat: ['solid', 'striped', 'plaid', 'gingham', 'polka dot', 'floral', 'animal print', 'paisley', 'tie-dye', 'lace', 'print', 'textured']
+};
+const LEGGED = /pants|trousers|jeans|shorts|jumpsuit/;
+const GROUPS = [['type', 'Item'], ['color', 'Color'], ['sil', 'Silhouette'], ['det', 'Fabric and details'], ['pat', 'Pattern']];
+
 function addTag(f, k, v, on) { if (!f.tags.some(t => t.v === v)) f.tags.push({ k, v, on }); }
+const activeType = f => { const t = f.tags.find(x => x.k === 'type' && x.on); return t ? t.v : ''; };
+/* The same shape means different words for different garments: an a-line pair of trousers is wide-leg. */
+function silWord(v, type) { if (LEGGED.test(type)) { if (v === 'a-line') return 'wide-leg'; if (v === 'tapered') return 'slim'; if (v === 'boxy') return 'straight-leg'; } return v; }
 function findQuery(f) {
-  const w = []; for (const k of ['color', 'det', 'pat', 'sil', 'type']) f.tags.filter(t => t.k === k && t.on).forEach(t => w.push(t.v));
+  const type = activeType(f), w = [];
+  for (const k of ['color', 'det', 'pat', 'sil', 'type']) f.tags.filter(t => t.k === k && t.on).forEach(t => w.push(k === 'sil' ? silWord(t.v, type) : t.v));
   if (f.aes) { const kw = mineProfile(prof()).keywords[0]; if (kw) w.push(kw); }
   if (f.extra) w.push(f.extra);
   const seen = new Set(); return w.join(' ').split(/\s+/).filter(x => x && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase())).join(' ');
 }
+const activePiece = () => state.find && state.find.pieces[state.find.active];
+
+function shrink(cv, max) {
+  const sc = Math.min(1, max / Math.max(cv.width, cv.height)), c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(cv.width * sc)); c.height = Math.max(1, Math.round(cv.height * sc));
+  c.getContext('2d', { willReadFrequently: true }).drawImage(cv, 0, 0, c.width, c.height); return c;
+}
+function cropCanvas(cv, [x0, y0, x1, y1]) {
+  const sx = Math.round(x0 * cv.width), sy = Math.round(y0 * cv.height), sw = Math.max(8, Math.round((x1 - x0) * cv.width)), sh = Math.max(8, Math.round((y1 - y0) * cv.height));
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh; c.getContext('2d', { willReadFrequently: true }).drawImage(cv, sx, sy, sw, sh, 0, 0, sw, sh); return c;
+}
+
+/* Read one piece (a box on the photo): colours, silhouette, pattern. */
+async function analyzePiece(sess, piece) {
+  piece.busy = true; piece.tags = []; piece.hasClip = false; piece.clipFail = false; piece.emb = null; piece.legsNote = false;
+  const crop = cropCanvas(sess.cv, piece.box); piece.src = crop.toDataURL('image/jpeg', .86);
+  const a = analyze(crop); piece.palette = a.palette; piece.stats = a.stats;
+  try {
+    const small = shrink(crop, 200), seg = segmentItem(small);
+    piece.sil = silhouetteOf(seg); if (seg.ok) piece.palette = maskedPalette(small, seg); piece.pat = patternOf(small, seg, piece.palette); piece.segOk = seg.ok;
+  } catch { piece.sil = { tags: [], ok: false }; piece.pat = { name: 'solid' }; piece.segOk = false; }
+  piece.palette.slice(0, 2).forEach((c, i) => { if (i === 0 || c.w > .2) addTag(piece, 'color', nameColor(c.hex), i === 0); });
+  if (piece.pat.name !== 'solid') addTag(piece, 'pat', piece.pat.name, true);
+  piece.sil.tags.forEach((v, i) => addTag(piece, 'sil', v, i < 2));
+  TYPE_CHIPS.forEach(v => addTag(piece, 'type', v, false));
+  if (piece.sil.legs) { const t = piece.tags.find(x => x.v === 'pants'); if (t) { t.on = true; piece.legsNote = true; } }   // two legs visible: trousers, not a skirt
+  piece.pngP = new Promise(res => crop.toBlob(res, 'image/png')).catch(() => null);
+  piece.busy = false;
+}
 
 async function startFind(rec) {
-  const f = { src: rec.src, palette: rec.palette, stats: rec.stats, emb: rec.emb || null, tags: [], extra: '', aes: false, busy: true, urlText: state.find && state.find.urlText || '' };
-  state.find = f; state.view = 'find'; render();
-  try {
-    const c = await loadCanvas(rec.src, 200), seg = segmentItem(c);
-    f.sil = silhouetteOf(seg); if (seg.ok) f.palette = maskedPalette(c, seg); f.pat = patternOf(c, seg, f.palette); f.segOk = seg.ok;
-  } catch { f.sil = { tags: [], ok: false }; f.pat = { name: 'solid' }; f.segOk = false; }
-  f.palette.slice(0, 2).forEach((c, i) => { if (i === 0 || c.w > .2) addTag(f, 'color', nameColor(c.hex), i === 0); });
-  if (f.pat.name !== 'solid') addTag(f, 'pat', f.pat.name, true);
-  f.sil.tags.forEach((v, i) => addTag(f, 'sil', v, i < 2));
-  TYPE_CHIPS.forEach(v => addTag(f, 'type', v, false));
-  f.pngP = new Promise(res => loadCanvas(rec.src, 1200).then(cv => cv.toBlob(res, 'image/png'))).catch(() => null);
-  f.busy = false; if (state.find === f) render();
-  if (state.smart) clipRead(f);
+  const sess = { src: rec.src, urlText: state.find && state.find.urlText || '', pieces: [], active: 0, redraw: false, busy: true };
+  state.find = sess; state.view = 'find'; render();
+  try { sess.cv = await loadCanvas(rec.src, 720); } catch { toast('Could not read that image'); state.find = null; render(); return; }
+  const piece = { box: [0, 0, 1, 1], tags: [], extra: '', aes: false, more: false }; sess.pieces.push(piece);
+  await analyzePiece(sess, piece); if (rec.emb) piece.emb = rec.emb;
+  sess.busy = false; if (state.find === sess) render();
+  if (state.smart) clipRead(piece);
 }
 
-async function clipRead(f) {
-  try {
-    await ml.load(); if (state.find !== f) return;
-    f.reading = true; render();
-    if (!f.emb) f.emb = await ml.image(f.src);
-    const [types, fabrics, fits] = await Promise.all([zeroShot(f.emb, GARMENTS, 2, 'g'), zeroShot(f.emb, FABRICS, 3, 'f'), zeroShot(f.emb, FITS, 2, 's')]);
-    if (state.find !== f) return;
-    f.tags = f.tags.filter(t => !(t.k === 'type' && !t.on)); f.hasClip = true;
-    types.forEach(([v], i) => { const old = f.tags.find(t => t.v === v); if (old) old.on = i === 0 || old.on; else f.tags.push({ k: 'type', v, on: i === 0 }); });
-    fabrics.forEach(([v], i) => addTag(f, 'det', v, i < 2));
-    fits.forEach(([v], i) => addTag(f, 'sil', v, i < 1));
-  } catch { f.clipFail = true; }
-  f.reading = false; if (state.find === f) render();
+async function addPiece(box) {
+  const sess = state.find; if (!sess || !sess.cv) return;
+  const piece = { box, tags: [], extra: '', aes: false, more: false };
+  if (sess.redraw && sess.pieces[sess.active]) { Object.assign(sess.pieces[sess.active], piece); sess.redraw = false; const p = sess.pieces[sess.active]; render(); await analyzePiece(sess, p); render(); if (state.smart) clipRead(p); return; }
+  sess.pieces.push(piece); sess.active = sess.pieces.length - 1; render();
+  await analyzePiece(sess, piece); if (state.find === sess) render();
+  if (state.smart) clipRead(piece);
 }
+
+async function clipRead(piece) {
+  const sess = state.find;
+  try {
+    await ml.load(); if (state.find !== sess || !sess.pieces.includes(piece)) return;
+    piece.reading = true; render();
+    if (!piece.emb) piece.emb = await ml.image(piece.src);
+    const [types, fabrics, fits] = await Promise.all([zeroShot(piece.emb, GARMENTS, 2, 'g'), zeroShot(piece.emb, FABRICS, 3, 'f'), zeroShot(piece.emb, FITS, 2, 's')]);
+    if (state.find !== sess || !sess.pieces.includes(piece)) return;
+    piece.hasClip = true;
+    let topType = types[0][0];
+    const skirtish = /skirt|dress/.test(topType);
+    if (piece.sil && piece.sil.legs && skirtish) { topType = piece.sil.taper > 1.15 ? 'wide-leg pants' : 'pants'; piece.legsNote = true; }   // two legs beat a skirt guess
+    piece.tags.forEach(t => { if (t.k === 'type') t.on = false; });
+    const old = piece.tags.find(t => t.k === 'type' && t.v === topType); if (old) old.on = true; else piece.tags.push({ k: 'type', v: topType, on: true });
+    types.slice(1).forEach(([v]) => { if (!piece.tags.some(t => t.v === v)) piece.tags.push({ k: 'type', v, on: false }); });
+    fabrics.forEach(([v], i) => addTag(piece, 'det', v, i < 2));
+    fits.forEach(([v], i) => addTag(piece, 'sil', v, i < 1));
+  } catch { piece.clipFail = true; }
+  piece.reading = false; if (state.find === sess) render();
+}
+
+/* Drag on the photo to box a piece; click a box to pick it. */
+let dragSel = null;
+document.addEventListener('pointerdown', e => {
+  const sel = e.target.closest && e.target.closest('.selector'); if (!sel || !state.find || e.button > 0) return;
+  const r = sel.getBoundingClientRect(), x = clamp((e.clientX - r.left) / r.width), y = clamp((e.clientY - r.top) / r.height);
+  dragSel = { sel, r, x0: x, y0: y, x1: x, y1: y, el: null }; e.preventDefault();
+});
+document.addEventListener('pointermove', e => {
+  if (!dragSel) return; const d = dragSel; d.x1 = clamp((e.clientX - d.r.left) / d.r.width); d.y1 = clamp((e.clientY - d.r.top) / d.r.height);
+  if (!d.el) { d.el = document.createElement('div'); d.el.className = 'selbox temp'; d.sel.appendChild(d.el); }
+  Object.assign(d.el.style, { left: Math.min(d.x0, d.x1) * 100 + '%', top: Math.min(d.y0, d.y1) * 100 + '%', width: Math.abs(d.x1 - d.x0) * 100 + '%', height: Math.abs(d.y1 - d.y0) * 100 + '%' });
+});
+document.addEventListener('pointerup', () => {
+  if (!dragSel) return; const d = dragSel; dragSel = null; if (d.el) d.el.remove();
+  const w = Math.abs(d.x1 - d.x0), h = Math.abs(d.y1 - d.y0), sess = state.find; if (!sess) return;
+  if (w < .06 || h < .06) {   // a click: pick the smallest box under the pointer
+    let best = -1, ba = 9;
+    sess.pieces.forEach((p, i) => { const [a, b, c2, d2] = p.box; if (d.x0 >= a && d.x0 <= c2 && d.y0 >= b && d.y0 <= d2 && (c2 - a) * (d2 - b) < ba) { ba = (c2 - a) * (d2 - b); best = i; } });
+    if (best >= 0) { sess.active = best; render(); } return;
+  }
+  addPiece([Math.min(d.x0, d.x1), Math.min(d.y0, d.y1), Math.max(d.x0, d.x1), Math.max(d.y0, d.y1)]);
+});
 
 function postForm(action, fields) {
   const fm = document.createElement('form'); fm.method = 'POST'; fm.action = action; fm.target = '_blank'; fm.enctype = 'multipart/form-data'; fm.style.display = 'none';
@@ -765,32 +853,52 @@ function postForm(action, fields) {
 }
 
 views.find = () => {
-  const p = prof(), f = state.find;
-  const head = header('Find', 'Find the piece', 'Show Trope something you love. It reads the silhouette, pattern and colors, then searches for it in shops and by image.', 'butterfly');
-  if (!f) {
+  const p = prof(), sess = state.find;
+  const head = header('Find', 'Find the piece', 'Show Trope something you love. It reads the silhouette, pattern and colors, then searches for it in shops and by image. You can correct anything it gets wrong.', 'butterfly');
+  if (!sess) {
     const thumbs = p.images.slice(0, 24).map(i => `<button class="thumb" data-act="findpick" data-id="${i.id}" aria-label="Use this image"><img src="${i.src}" alt=""></button>`).join('');
-    return `${head}<div class="drop" id="drop">${art('teal', 'dz-l')}${art('butterfly', 'dz-r')}<p class="big">Show me the piece</p><p class="muted">drop a photo of a garment, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="findbrowse">Choose an image</button></p></div>
+    return `${head}<div class="drop" id="drop">${art('teal', 'dz-l')}${art('butterfly', 'dz-r')}<p class="big">Show me the piece</p><p class="muted">drop a photo of a garment or outfit, or paste with Ctrl/⌘ + V</p><p><button class="primary" data-act="findbrowse">Choose an image</button></p></div>
     ${thumbs ? `<h2 class="sub">Or pick from your collection</h2><div class="thumbs">${thumbs}</div>` : ''}
-    <p class="note">Works best with one item on a plain background, like a product or flat-lay photo.</p>`;
+    <p class="note">One item on a plain background reads best. For an outfit, you can box each piece separately.</p>`;
   }
-  const pr = mineProfile(p), fit = pr.stats ? matchScore({ palette: f.palette, stats: f.stats, emb: f.emb }, pr) : null;
-  const q = findQuery(f), enc = encodeURIComponent(f.urlText || '');
-  const group = (label, k) => { const idx = f.tags.map((t, i) => [t, i]).filter(([t]) => t.k === k); return idx.length ? `<div class="ctl"><span>${label}</span><div class="chips">${idx.map(([t, i]) => `<button class="chip" data-act="ftag" data-i="${i}" aria-pressed="${t.on}">${esc(t.v)}</button>`).join('')}</div></div>` : ''; };
+  if (!sess.pieces.length) return `${head}<p class="empty">Reading the photo…</p>`;
+  const f = sess.pieces[sess.active], multi = sess.pieces.length > 1;
+  const pr = mineProfile(p), fit = pr.stats && f.palette ? matchScore({ palette: f.palette, stats: f.stats, emb: f.emb }, pr) : null;
+  const q = findQuery(f), enc = encodeURIComponent(sess.urlText || ''), type = activeType(f);
+  const label = (pc, i) => `${i + 1}. ${activeType(pc) || 'piece'}`;
+  const boxes = (multi || sess.redraw ? sess.pieces : []).map((pc, i) => { const [a, b, c2, d] = pc.box; return `<div class="selbox ${i === sess.active ? 'on' : ''}" style="left:${a * 100}%;top:${b * 100}%;width:${(c2 - a) * 100}%;height:${(d - b) * 100}%"><i>${i + 1}</i></div>`; }).join('');
+  const group = (title, k) => {
+    const have = f.tags.filter(t => t.k === k), names = new Set(have.map(t => t.v));
+    const extra = f.more ? MASTER[k] ? MASTER[k].filter(v => !names.has(v)) : [] : [];
+    const chips = [...have.map(t => [t.v, t.on]), ...extra.map(v => [v, false])];
+    return chips.length ? `<div class="ctl"><span>${title}</span><div class="chips">${chips.map(([v, on]) => `<button class="chip" data-act="ftagv" data-k="${k}" data-v="${esc(v)}" aria-pressed="${on}">${esc(v)}</button>`).join('')}</div></div>` : '';
+  };
   const smartLine = state.smart ? (f.reading ? 'Reading the garment type and fabric on your device…' : f.hasClip ? 'Garment type and fabric were read by the on-device model.' : f.clipFail ? 'Could not run smart analysis, so choose the item type yourself.' : '')
     : `Choose the item type below, or <button class="link" data-act="fsmart">turn on smart analysis</button> to have it detected on your device.`;
+  const hints = [f.legsNote ? 'The shape shows two legs, so I chose pants over a skirt. Change the item below if that is wrong.' : '',
+    LEGGED.test(type) && f.tags.some(t => t.k === 'sil' && t.on && (t.v === 'a-line' || t.v === 'tapered' || t.v === 'boxy')) ? 'For pants, a-line is searched as wide-leg, tapered as slim and boxy as straight-leg.' : '',
+    !f.segOk ? 'This piece is hard to separate from its background, so the shape reading is rough. Adjust the silhouette below.' : ''].filter(Boolean);
   return `${head}
   <div class="find-grid">
     <div>
-      <img class="matchimg" src="${f.src}" alt="Item to find">
-      <div style="margin-top:1rem">${swatches(f.palette, 'slim')}</div>
+      <div class="selector ${sess.redraw ? 'redraw' : ''}"><img src="${sess.src}" alt="Photo to read" draggable="false">${boxes}</div>
+      <p class="muted small" style="margin:.7rem 0">${sess.redraw ? 'Drag on the photo to redraw this piece.' : 'Drag on the photo to box a piece, like the pants or the top. Click a box to pick it.'}</p>
+      <div class="chips">${sess.pieces.map((pc, i) => `<button class="chip" data-act="fpiece" data-i="${i}" aria-pressed="${i === sess.active}">${esc(label(pc, i))}</button>`).join('')}</div>
+      <div class="row" style="margin-top:.8rem">
+        <button class="ghost" data-act="fsplit" data-n="2">Top + bottom</button><button class="ghost" data-act="fsplit" data-n="3">Top, bottom, shoes</button>
+        <button class="ghost" data-act="fredraw">${sess.redraw ? 'Cancel redraw' : 'Redraw this box'}</button>${multi ? '<button class="ghost danger" data-act="fdelpiece">Remove this piece</button>' : ''}
+      </div>
+      <div style="margin-top:1rem">${f.palette ? swatches(f.palette, 'slim') : ''}</div>
       ${fit !== null ? `<p class="muted small" style="margin-top:.8rem">Fits ${possessive(p).toLowerCase()} aesthetic: <b>${fit}%</b></p>` : ''}
-      <p style="margin-top:1rem"><button class="ghost" data-act="freset">Use a different item</button></p>
+      <p style="margin-top:1rem"><button class="ghost" data-act="freset">Use a different photo</button></p>
     </div>
     <div class="find-main">
       <section class="card fade">
-        <h2 class="sub">What I see</h2>
-        ${f.segOk ? '' : '<p class="muted small">The item is hard to separate from its background, so the silhouette reading is rough. A plain background helps.</p>'}
-        ${group('Item', 'type')}${group('Color', 'color')}${group('Silhouette', 'sil')}${group('Fabric and details', 'det')}${group('Pattern', 'pat')}
+        <h2 class="sub">What I see${multi ? ` in piece ${sess.active + 1}` : ''}</h2>
+        ${f.busy ? '<p class="muted">Reading this piece…</p>' : ''}
+        ${hints.map(h => `<p class="muted small">${esc(h)}</p>`).join('')}
+        ${GROUPS.map(([k, t]) => group(t, k)).join('')}
+        <p class="row"><button class="link" data-act="fmore">${f.more ? 'Show fewer options' : 'Not right? Choose from all options'}</button></p>
         <p class="muted small">${smartLine}</p>
         <div class="ctl"><span>Extra words</span><input type="text" data-change="fextra" value="${esc(f.extra)}" placeholder="vintage, 90s, linen…" maxlength="40"></div>
         <label class="inline"><input type="checkbox" data-change="faes" ${f.aes ? 'checked' : ''}> Add my aesthetic keyword</label>
@@ -798,15 +906,15 @@ views.find = () => {
       </section>
       <section class="card fade">
         <h2 class="sub">Search by image</h2>
-        <p class="muted small">Bing matches the actual photo and lists shopping results. Google Lens needs a paste: the image is copied for you.</p>
+        <p class="muted small">${multi ? 'These use the boxed piece, not the whole photo. ' : ''}Bing matches the photo and lists shopping results. Google Lens needs a paste: the image is copied for you.</p>
         <div class="row"><button class="primary" data-act="fbing">Bing visual search</button><button class="ghost" data-act="flens">Google Lens</button></div>
-        <div class="ctl" style="margin-top:1rem"><span>Or search by a picture's web address</span><input type="text" data-change="furl" value="${esc(f.urlText)}" placeholder="Paste an image link from Depop, Pinterest…"></div>
-        ${f.urlText ? `<div class="links"><a class="chip" target="_blank" rel="noopener" href="https://lens.google.com/uploadbyurl?url=${enc}">Google Lens</a><a class="chip" target="_blank" rel="noopener" href="https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:${enc}">Bing</a><a class="chip" target="_blank" rel="noopener" href="https://yandex.com/images/search?rpt=imageview&url=${enc}">Yandex</a><a class="chip" target="_blank" rel="noopener" href="https://tineye.com/search?url=${enc}">TinEye</a></div>` : ''}
+        <div class="ctl" style="margin-top:1rem"><span>Or search by a picture's web address</span><input type="text" data-change="furl" value="${esc(sess.urlText)}" placeholder="Paste an image link from Depop, Pinterest…"></div>
+        ${sess.urlText ? `<div class="links"><a class="chip" target="_blank" rel="noopener" href="https://lens.google.com/uploadbyurl?url=${enc}">Google Lens</a><a class="chip" target="_blank" rel="noopener" href="https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:${enc}">Bing</a><a class="chip" target="_blank" rel="noopener" href="https://yandex.com/images/search?rpt=imageview&url=${enc}">Yandex</a><a class="chip" target="_blank" rel="noopener" href="https://tineye.com/search?url=${enc}">TinEye</a></div>` : ''}
         <p class="muted small" style="margin-top:1rem">Depop, AliExpress and SHEIN only offer photo search inside their apps. Bing and Lens do index their listings, and the shop links below use each store's own search.</p>
       </section>
       <section class="card fade">
         <h2 class="sub">Shop this look</h2>
-        ${q ? SHOPS.map(([label, shops]) => `<div class="ctl shopgroup"><span>${label}</span><div class="links">${shops.map(([n, u]) => `<a class="chip" target="_blank" rel="noopener" href="${esc(u(q))}">${n}</a>`).join('')}</div></div>`).join('') : '<p class="muted">Pick a few tags above to build a search.</p>'}
+        ${q ? SHOPS.map(([lab, shops]) => `<div class="ctl shopgroup"><span>${lab}</span><div class="links">${shops.map(([n, u]) => `<a class="chip" target="_blank" rel="noopener" href="${esc(u(q))}">${n}</a>`).join('')}</div></div>`).join('') : '<p class="muted">Pick a few tags above to build a search.</p>'}
         <p class="muted small">Ethical here means the brand markets sustainable or fair-made practices, so check a brand on <a href="https://directory.goodonyou.eco/" target="_blank" rel="noopener">Good On You</a> before buying.</p>
       </section>
     </div>
@@ -1022,14 +1130,29 @@ const actions = {
   },
   findbrowse() { $('#findInput').click(); },
   findpick(el) { const im = prof().images.find(i => i.id === el.dataset.id); if (im) startFind(im); },
-  ftag(el) { const f = state.find, t = f.tags[+el.dataset.i]; if (t.k === 'type' && !t.on) f.tags.forEach(x => { if (x.k === 'type') x.on = false; }); t.on = !t.on; render(); },
-  fbing() { postForm('https://www.bing.com/images/search?view=detailv2&iss=sbiupload&FORM=SBIHMP', { imageBin: state.find.src.split(',')[1] }); },
+  ftagv(el) {
+    const f = activePiece(), k = el.dataset.k, v = el.dataset.v; let t = f.tags.find(x => x.k === k && x.v === v);
+    if (!t) { t = { k, v, on: false }; f.tags.push(t); }
+    if ((k === 'type' || k === 'pat') && !t.on) f.tags.forEach(x => { if (x.k === k) x.on = false; });   // one choice for item and pattern
+    t.on = !t.on; if (k === 'type') f.legsNote = false; render();
+  },
+  fpiece(el) { state.find.active = +el.dataset.i; state.find.redraw = false; render(); },
+  fmore() { const f = activePiece(); f.more = !f.more; render(); },
+  fredraw() { state.find.redraw = !state.find.redraw; render(); },
+  fdelpiece() { const sess = state.find; if (sess.pieces.length < 2) return; sess.pieces.splice(sess.active, 1); sess.active = Math.min(sess.active, sess.pieces.length - 1); sess.redraw = false; render(); },
+  async fsplit(el) {
+    const sess = state.find, boxes = +el.dataset.n === 2 ? [[0, 0, 1, .5], [0, .5, 1, 1]] : [[0, 0, 1, .42], [0, .42, 1, .85], [0, .85, 1, 1]];
+    sess.pieces = boxes.map(bx => ({ box: bx, tags: [], extra: '', aes: false, more: false })); sess.active = 0; sess.redraw = false; render();
+    for (const pc of sess.pieces) { await analyzePiece(sess, pc); if (state.find === sess) render(); }
+    if (state.smart) for (const pc of sess.pieces) await clipRead(pc);
+  },
+  fbing() { postForm('https://www.bing.com/images/search?view=detailv2&iss=sbiupload&FORM=SBIHMP', { imageBin: activePiece().src.split(',')[1] }); },
   flens() {
-    const f = state.find, fail = () => toast('Could not copy the image. Save it and upload it on Google Lens.');
+    const f = activePiece(), fail = () => toast('Could not copy the image. Save it and upload it on Google Lens.');
     try { navigator.clipboard.write([new ClipboardItem({ 'image/png': f.pngP })]).then(() => toast('Image copied. Press Ctrl+V on the Google Lens page.')).catch(fail); } catch { fail(); }
     window.open('https://lens.google.com/', '_blank');
   },
-  fsmart() { setSmart(true).then(() => { if (state.find && state.smart) clipRead(state.find); }); },
+  fsmart() { setSmart(true).then(() => { if (state.find && state.smart) clipRead(activePiece()); }); },
   freset() { state.find = null; render(); },
   matchfind() { if (state.match) startFind(state.match); },
   findthis(el) { const im = prof().images.find(i => i.id === el.dataset.id); $('#imgDialog').close(); if (im) startFind(im); },
@@ -1075,9 +1198,9 @@ const changes = {
     const g = prof().groups.find(g => g.id === el.value); state.sel.forEach(id => { if (!g.imageIds.includes(id)) g.imageIds.push(id); });
     toast(`Added to “${g.name}”`); state.sel.clear(); save(); render();
   },
-  fextra(el) { state.find.extra = el.value.trim(); render(); },
+  fextra(el) { activePiece().extra = el.value.trim(); render(); },
   furl(el) { state.find.urlText = el.value.trim(); render(); },
-  faes(el) { state.find.aes = el.checked; render(); },
+  faes(el) { activePiece().aes = el.checked; render(); },
   gsource(el) { state.gift.source = el.value; render(); },
   gbudget(el) { state.gift.budget = +el.value; render(); }
 };
